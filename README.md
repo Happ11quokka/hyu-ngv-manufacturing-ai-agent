@@ -187,7 +187,7 @@ DEV_002,0
 
 | 역할 | 이름   | GitHub                                           |
 | ---- | ------ | ------------------------------------------------ |
-| 팀장 | 임동현 | [@Happ11quokka](https://github.com/Happ11quokka) |
+| 팀원 | 임동현 | [@Happ11quokka](https://github.com/Happ11quokka) |
 
 ---
 
