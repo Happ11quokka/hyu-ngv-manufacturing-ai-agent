@@ -6,13 +6,18 @@
 
 # API credentials & secrets
 luxia_api.rtf
-luxia_api_reference.md
 *.env
 .env*
 secrets/
 credentials/
 *_api_key*
 *_secret*
+
+# Preprocessed images (debug output)
+preprocessed_images/
+
+# Claude Code
+.claude/
 
 # Python
 __pycache__/

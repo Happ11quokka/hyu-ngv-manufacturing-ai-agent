@@ -13,7 +13,17 @@ V6 대비 변경사항 (V6.1):
 5. should_trigger_recheck() 함수로 명확한 recheck 조건 정의
 """
 
+from image_preprocessing_tools import (
+    preprocess_focus_leads,
+    preprocess_focus_body,
+    preprocess_focus_lead_tips,
+    preprocess_full_enhanced,
+    load_image,
+    image_to_base64,
+    base64_to_data_url,
+)
 import os
+import sys
 import re
 import json
 import time
@@ -24,16 +34,12 @@ from dotenv import load_dotenv
 from langsmith import traceable
 from typing import List, Dict, Tuple, Optional
 
-# 이미지 전처리 도구 import
-from image_preprocessing_tools import (
-    preprocess_focus_leads,
-    preprocess_focus_body,
-    preprocess_focus_lead_tips,
-    preprocess_full_enhanced,
-    load_image,
-    image_to_base64,
-    base64_to_data_url,
-)
+# 프로젝트 루트 경로 계산
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(SCRIPT_DIR))
+
+# 이미지 전처리 도구 import (src/preprocessing 경로 추가)
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "src", "preprocessing"))
 
 # .env 파일에서 환경변수 로드
 load_dotenv()
@@ -556,7 +562,8 @@ def stage1_recheck_with_preprocessing(
     verbose: bool = False
 ) -> dict:
     """Stage 1 재검사: 전처리 도구로 이미지 처리 후 재관찰"""
-    preprocessed_url = preprocess_image_for_focus(img_url, focus_action, verbose)
+    preprocessed_url = preprocess_image_for_focus(
+        img_url, focus_action, verbose)
 
     focus_prompts = {
         "recheck_leads_focus": "Focus specifically on the THREE METAL LEADS. Check their shapes, lengths, alignment to holes, and any overlap or clumping. ",
@@ -648,7 +655,8 @@ def vote_decision(
 
     # 메타데이터가 없으면 기본값 생성 (첫 번째만 original)
     if result_metadata is None:
-        result_metadata = [{"is_original": (i == 0)} for i in range(len(results))]
+        result_metadata = [{"is_original": (i == 0)}
+                           for i in range(len(results))]
 
     abnormal_weight = 0.0
     normal_weight = 0.0
@@ -661,7 +669,8 @@ def vote_decision(
         label = result.get("label", "normal")
         key_reasons = result.get("key_reasons", [])
         confidence = result.get("confidence", 0.5)
-        meta = result_metadata[i] if i < len(result_metadata) else {"is_original": False}
+        meta = result_metadata[i] if i < len(result_metadata) else {
+            "is_original": False}
 
         # 기본 가중치 계산
         weight = WEIGHTS["recheck"]
@@ -684,7 +693,8 @@ def vote_decision(
             origin_str = "원본" if meta.get("is_original") else "recheck"
             crit_str = "[CRIT]" if has_critical_reasons(key_reasons) else ""
             susp_str = "[SUSP]" if has_suspicious_reasons(key_reasons) else ""
-            print(f"      - {origin_str} {crit_str}{susp_str}: {label} (conf={confidence:.2f}, weight={weight:.2f})")
+            print(
+                f"      - {origin_str} {crit_str}{susp_str}: {label} (conf={confidence:.2f}, weight={weight:.2f})")
 
         if label == "abnormal":
             abnormal_weight += weight
@@ -693,7 +703,8 @@ def vote_decision(
             normal_weight += weight
 
     if verbose:
-        print(f"    [가중치 합계] abnormal: {abnormal_weight:.2f}, normal: {normal_weight:.2f}")
+        print(
+            f"    [가중치 합계] abnormal: {abnormal_weight:.2f}, normal: {normal_weight:.2f}")
 
     # 동점 체크 (가중치 차이가 0.1 이하면 동점으로 간주)
     weight_diff = abs(abnormal_weight - normal_weight)
@@ -759,10 +770,13 @@ def classify_agent(
             triggered_checks = stage2_result.get("triggered_checks", "none")
 
             if verbose:
-                print(f"    → 1차 판정: {original_label}, confidence: {original_confidence:.2f}")
+                print(
+                    f"    → 1차 판정: {original_label}, confidence: {original_confidence:.2f}")
                 print(f"    → 근거: {original_reasons}")
-                print(f"    → Critical 근거 수: {count_critical_reasons(original_reasons)}")
-                print(f"    → Suspicious 근거 수: {count_suspicious_reasons(original_reasons)}")
+                print(
+                    f"    → Critical 근거 수: {count_critical_reasons(original_reasons)}")
+                print(
+                    f"    → Suspicious 근거 수: {count_suspicious_reasons(original_reasons)}")
 
             # ========== V6.1 핵심: 조건부 툴 호출 로직 ==========
             should_recheck, recheck_reason = should_trigger_recheck(
@@ -770,7 +784,8 @@ def classify_agent(
             )
 
             if verbose:
-                print(f"    → Recheck 필요: {should_recheck} (이유: {recheck_reason})")
+                print(
+                    f"    → Recheck 필요: {should_recheck} (이유: {recheck_reason})")
 
             # ========== Case 1: Critical 근거가 있는 abnormal ==========
             if original_label == "abnormal" and has_critical_reasons(original_reasons):
@@ -778,23 +793,27 @@ def classify_agent(
                     print(f"\n  [V6.1] Critical 근거가 있는 abnormal → 원본 이미지로 재검증")
 
                 recheck_count += 1
-                stage1_recheck = stage1_original_recheck(img_url, verbose=verbose)
+                stage1_recheck = stage1_original_recheck(
+                    img_url, verbose=verbose)
                 stage2_recheck = stage2_decide(stage1_recheck, verbose=verbose)
                 all_results.append(stage2_recheck)
-                result_metadata.append({"is_original": False, "focus": "original_recheck"})
+                result_metadata.append(
+                    {"is_original": False, "focus": "original_recheck"})
 
                 recheck_label = stage2_recheck.get("label", "normal")
                 recheck_confidence = stage2_recheck.get("confidence", 0.5)
                 recheck_reasons = stage2_recheck.get("key_reasons", [])
 
                 if verbose:
-                    print(f"    → 재검증 판정: {recheck_label}, confidence: {recheck_confidence:.2f}")
+                    print(
+                        f"    → 재검증 판정: {recheck_label}, confidence: {recheck_confidence:.2f}")
                     print(f"    → 재검증 근거: {recheck_reasons}")
 
                 # 원본과 재검증 결과가 다르면 추가 recheck
                 if original_label != recheck_label:
                     if verbose:
-                        print(f"\n  [V6.1] 판정 충돌! 원본({original_label}) vs 재검증({recheck_label})")
+                        print(
+                            f"\n  [V6.1] 판정 충돌! 원본({original_label}) vs 재검증({recheck_label})")
                         print(f"  [V6.1] 전처리 이미지로 추가 검증 수행")
 
                     for focus in FOCUS_SEQUENCE[:2]:
@@ -807,15 +826,19 @@ def classify_agent(
                         if verbose:
                             print(f"\n  [Recheck #{recheck_count}] {focus}")
 
-                        stage1_focus = stage1_recheck_with_preprocessing(img_url, focus, verbose=verbose)
-                        stage2_focus = stage2_decide(stage1_focus, verbose=verbose)
+                        stage1_focus = stage1_recheck_with_preprocessing(
+                            img_url, focus, verbose=verbose)
+                        stage2_focus = stage2_decide(
+                            stage1_focus, verbose=verbose)
                         all_results.append(stage2_focus)
-                        result_metadata.append({"is_original": False, "focus": focus})
+                        result_metadata.append(
+                            {"is_original": False, "focus": focus})
 
                         if verbose:
                             focus_label = stage2_focus.get("label", "normal")
                             focus_conf = stage2_focus.get("confidence", 0.5)
-                            print(f"    → {focus} 판정: {focus_label}, confidence: {focus_conf:.2f}")
+                            print(
+                                f"    → {focus} 판정: {focus_label}, confidence: {focus_conf:.2f}")
 
             # ========== Case 2: Suspicious 근거가 있거나 confidence가 낮은 경우 (V6.1 신규) ==========
             elif should_recheck:
@@ -831,16 +854,19 @@ def classify_agent(
                 if verbose:
                     print(f"\n  [Recheck #{recheck_count}] {first_focus}")
 
-                stage1_recheck = stage1_recheck_with_preprocessing(img_url, first_focus, verbose=verbose)
+                stage1_recheck = stage1_recheck_with_preprocessing(
+                    img_url, first_focus, verbose=verbose)
                 stage2_recheck = stage2_decide(stage1_recheck, verbose=verbose)
                 all_results.append(stage2_recheck)
-                result_metadata.append({"is_original": False, "focus": first_focus})
+                result_metadata.append(
+                    {"is_original": False, "focus": first_focus})
 
                 recheck_label = stage2_recheck.get("label", "normal")
                 recheck_confidence = stage2_recheck.get("confidence", 0.5)
 
                 if verbose:
-                    print(f"    → Recheck 판정: {recheck_label}, confidence: {recheck_confidence:.2f}")
+                    print(
+                        f"    → Recheck 판정: {recheck_label}, confidence: {recheck_confidence:.2f}")
 
                 # 원본과 recheck 결과가 다르면 추가 검증
                 if original_label != recheck_label and recheck_count < MAX_RECHECK_COUNT:
@@ -854,17 +880,24 @@ def classify_agent(
                             used_focuses.append(focus)
 
                             if verbose:
-                                print(f"\n  [Recheck #{recheck_count}] {focus}")
+                                print(
+                                    f"\n  [Recheck #{recheck_count}] {focus}")
 
-                            stage1_focus = stage1_recheck_with_preprocessing(img_url, focus, verbose=verbose)
-                            stage2_focus = stage2_decide(stage1_focus, verbose=verbose)
+                            stage1_focus = stage1_recheck_with_preprocessing(
+                                img_url, focus, verbose=verbose)
+                            stage2_focus = stage2_decide(
+                                stage1_focus, verbose=verbose)
                             all_results.append(stage2_focus)
-                            result_metadata.append({"is_original": False, "focus": focus})
+                            result_metadata.append(
+                                {"is_original": False, "focus": focus})
 
                             if verbose:
-                                focus_label = stage2_focus.get("label", "normal")
-                                focus_conf = stage2_focus.get("confidence", 0.5)
-                                print(f"    → {focus} 판정: {focus_label}, confidence: {focus_conf:.2f}")
+                                focus_label = stage2_focus.get(
+                                    "label", "normal")
+                                focus_conf = stage2_focus.get(
+                                    "confidence", 0.5)
+                                print(
+                                    f"    → {focus} 판정: {focus_label}, confidence: {focus_conf:.2f}")
                             break
 
             # ========== V6.1: 가중치 기반 투표 ==========
@@ -895,12 +928,16 @@ def classify_agent(
                 used_focuses.append(next_focus)
 
                 if verbose:
-                    print(f"    → 타이브레이크 recheck #{recheck_count}: {next_focus}")
+                    print(
+                        f"    → 타이브레이크 recheck #{recheck_count}: {next_focus}")
 
-                stage1_tiebreak = stage1_recheck_with_preprocessing(img_url, next_focus, verbose=verbose)
-                stage2_tiebreak = stage2_decide(stage1_tiebreak, verbose=verbose)
+                stage1_tiebreak = stage1_recheck_with_preprocessing(
+                    img_url, next_focus, verbose=verbose)
+                stage2_tiebreak = stage2_decide(
+                    stage1_tiebreak, verbose=verbose)
                 all_results.append(stage2_tiebreak)
-                result_metadata.append({"is_original": False, "focus": next_focus})
+                result_metadata.append(
+                    {"is_original": False, "focus": next_focus})
 
                 tiebreak_label = stage2_tiebreak.get("label", "normal")
                 if verbose:
@@ -924,10 +961,12 @@ def classify_agent(
 
             if verbose:
                 result_text = '불량(1)' if final_label_int == 1 else '정상(0)'
-                print(f"\n  [최종 결정] {result_text} (confidence: {final_confidence:.2f})")
+                print(
+                    f"\n  [최종 결정] {result_text} (confidence: {final_confidence:.2f})")
                 if needs_review:
                     print(f"  [!] {review_message}")
-                print(f"  [통계] 총 recheck 횟수: {recheck_count}, 사용된 focus: {used_focuses}")
+                print(
+                    f"  [통계] 총 recheck 횟수: {recheck_count}, 사용된 focus: {used_focuses}")
                 print(f"  [통계] 투표 결과: {[r.get('label') for r in all_results]}")
 
             return final_label_int, needs_review, review_message
@@ -957,7 +996,8 @@ def main():
     print("1. Suspicious 근거(blob_like 등)가 있으면 → 추가 검증 (툴 호출)")
     print(f"2. Confidence가 {THRESHOLDS['confidence_for_recheck']} 이하면 → 추가 검증")
     print(f"3. 투표 수가 {THRESHOLDS['min_votes_for_decision']}개 미만이면 → 추가 검증")
-    print(f"4. 가중치: 원본={WEIGHTS['original']}x, Critical={WEIGHTS['critical_reason']}x, Suspicious={WEIGHTS['suspicious_reason']}x")
+    print(
+        f"4. 가중치: 원본={WEIGHTS['original']}x, Critical={WEIGHTS['critical_reason']}x, Suspicious={WEIGHTS['suspicious_reason']}x")
     print("5. 동점 시 abnormal 우선 (보수적 판단)")
     print()
 
@@ -1022,7 +1062,8 @@ def main():
         print(f"[검토 필요 항목] 총 {len(review_items)}개")
         print(f"{'='*60}")
         for item in review_items:
-            print(f"  - {item['id']}: label={item['label']}, {item['message']}")
+            print(
+                f"  - {item['id']}: label={item['label']}, {item['message']}")
 
     print(f"\nLangSmith 대시보드: https://smith.langchain.com")
     print(f"{'='*60}")
