@@ -2,3 +2,6 @@ requests
 pandas
 python-dotenv
 langsmith
+langchain-core
+opencv-python-headless
+Pillow
