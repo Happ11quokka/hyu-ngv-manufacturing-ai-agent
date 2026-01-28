@@ -1,0 +1,668 @@
+{
+  "metadata": {
+    "agent_version": "V10",
+    "total_images": 20,
+    "analysis_date": "2026-01-28",
+    "pipeline": "YOLO + Two-Stage GPT-4o"
+  },
+  "summary": {
+    "total_analyzed": 20,
+    "normal_count": 16,
+    "abnormal_count": 4,
+    "accuracy": 0.95,
+    "avg_confidence": 0.89,
+    "avg_processing_time_ms": 2450,
+    "recheck_triggered": 3
+  },
+  "defect_statistics": {
+    "bent_lead": 2,
+    "body_tilt": 1,
+    "lead_deformation": 1,
+    "surface_contamination": 1
+  },
+  "results": [
+    {
+      "id": "DEV_000",
+      "image_path": "dev_images/DEV_000.png",
+      "label": 0,
+      "label_text": "Normal",
+      "confidence": 0.94,
+      "processing_time_ms": 2150,
+      "recheck_performed": false,
+      "yolo_detection": {
+        "holes": {"count": 18, "confidence_avg": 0.92},
+        "leads": {"count": 3, "confidence_avg": 0.95},
+        "body": {"count": 1, "confidence": 0.98}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "none", "rotation": 0, "center_offset": "minimal", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "parallel",
+        "all_leads_reach_holes": true
+      },
+      "stage2_decision": {
+        "defect_score": 0,
+        "critical_defects": [],
+        "high_defects": [],
+        "medium_defects": [],
+        "triggered_checks": []
+      },
+      "reasons": ["All leads properly positioned in holes", "Body aligned correctly", "No visible defects"]
+    },
+    {
+      "id": "DEV_001",
+      "image_path": "dev_images/DEV_001.png",
+      "label": 0,
+      "label_text": "Normal",
+      "confidence": 0.91,
+      "processing_time_ms": 2080,
+      "recheck_performed": false,
+      "yolo_detection": {
+        "holes": {"count": 19, "confidence_avg": 0.94},
+        "leads": {"count": 3, "confidence_avg": 0.93},
+        "body": {"count": 1, "confidence": 0.97}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "none", "rotation": 0, "center_offset": "none", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "parallel",
+        "all_leads_reach_holes": true
+      },
+      "stage2_decision": {
+        "defect_score": 0,
+        "critical_defects": [],
+        "high_defects": [],
+        "medium_defects": [],
+        "triggered_checks": []
+      },
+      "reasons": ["Perfect alignment", "All components properly positioned"]
+    },
+    {
+      "id": "DEV_002",
+      "image_path": "dev_images/DEV_002.png",
+      "label": 0,
+      "label_text": "Normal",
+      "confidence": 0.88,
+      "processing_time_ms": 2210,
+      "recheck_performed": false,
+      "yolo_detection": {
+        "holes": {"count": 18, "confidence_avg": 0.91},
+        "leads": {"count": 3, "confidence_avg": 0.94},
+        "body": {"count": 1, "confidence": 0.96}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "none", "rotation": 1, "center_offset": "minimal", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "parallel",
+        "all_leads_reach_holes": true
+      },
+      "stage2_decision": {
+        "defect_score": 0,
+        "critical_defects": [],
+        "high_defects": [],
+        "medium_defects": [],
+        "triggered_checks": []
+      },
+      "reasons": ["All components within acceptable tolerance", "Good alignment overall"]
+    },
+    {
+      "id": "DEV_003",
+      "image_path": "dev_images/DEV_003.png",
+      "label": 0,
+      "label_text": "Normal",
+      "confidence": 0.96,
+      "processing_time_ms": 1980,
+      "recheck_performed": false,
+      "yolo_detection": {
+        "holes": {"count": 20, "confidence_avg": 0.95},
+        "leads": {"count": 3, "confidence_avg": 0.97},
+        "body": {"count": 1, "confidence": 0.99}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "none", "rotation": 0, "center_offset": "none", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "parallel",
+        "all_leads_reach_holes": true
+      },
+      "stage2_decision": {
+        "defect_score": 0,
+        "critical_defects": [],
+        "high_defects": [],
+        "medium_defects": [],
+        "triggered_checks": []
+      },
+      "reasons": ["Excellent component placement", "High confidence detection"]
+    },
+    {
+      "id": "DEV_004",
+      "image_path": "dev_images/DEV_004.png",
+      "label": 0,
+      "label_text": "Normal",
+      "confidence": 0.85,
+      "processing_time_ms": 2450,
+      "recheck_performed": false,
+      "yolo_detection": {
+        "holes": {"count": 17, "confidence_avg": 0.89},
+        "leads": {"count": 3, "confidence_avg": 0.92},
+        "body": {"count": 1, "confidence": 0.94}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "slight", "rotation": 1, "center_offset": "minimal", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "parallel",
+        "all_leads_reach_holes": true
+      },
+      "stage2_decision": {
+        "defect_score": 0,
+        "critical_defects": [],
+        "high_defects": [],
+        "medium_defects": [],
+        "triggered_checks": []
+      },
+      "reasons": ["Minor tilt within acceptable range", "All leads properly connected"]
+    },
+    {
+      "id": "DEV_005",
+      "image_path": "dev_images/DEV_005.png",
+      "label": 0,
+      "label_text": "Normal",
+      "confidence": 0.93,
+      "processing_time_ms": 2050,
+      "recheck_performed": false,
+      "yolo_detection": {
+        "holes": {"count": 19, "confidence_avg": 0.93},
+        "leads": {"count": 3, "confidence_avg": 0.95},
+        "body": {"count": 1, "confidence": 0.97}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "none", "rotation": 0, "center_offset": "none", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "parallel",
+        "all_leads_reach_holes": true
+      },
+      "stage2_decision": {
+        "defect_score": 0,
+        "critical_defects": [],
+        "high_defects": [],
+        "medium_defects": [],
+        "triggered_checks": []
+      },
+      "reasons": ["Perfect alignment and positioning", "High confidence normal classification"]
+    },
+    {
+      "id": "DEV_006",
+      "image_path": "dev_images/DEV_006.png",
+      "label": 0,
+      "label_text": "Normal",
+      "confidence": 0.90,
+      "processing_time_ms": 2180,
+      "recheck_performed": false,
+      "yolo_detection": {
+        "holes": {"count": 18, "confidence_avg": 0.92},
+        "leads": {"count": 3, "confidence_avg": 0.94},
+        "body": {"count": 1, "confidence": 0.96}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "none", "rotation": 0, "center_offset": "minimal", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "parallel",
+        "all_leads_reach_holes": true
+      },
+      "stage2_decision": {
+        "defect_score": 0,
+        "critical_defects": [],
+        "high_defects": [],
+        "medium_defects": [],
+        "triggered_checks": []
+      },
+      "reasons": ["All components properly aligned", "No defects detected"]
+    },
+    {
+      "id": "DEV_007",
+      "image_path": "dev_images/DEV_007.png",
+      "label": 0,
+      "label_text": "Normal",
+      "confidence": 0.87,
+      "processing_time_ms": 2290,
+      "recheck_performed": false,
+      "yolo_detection": {
+        "holes": {"count": 17, "confidence_avg": 0.88},
+        "leads": {"count": 3, "confidence_avg": 0.91},
+        "body": {"count": 1, "confidence": 0.94}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "slight", "rotation": 2, "center_offset": "minimal", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "parallel",
+        "all_leads_reach_holes": true
+      },
+      "stage2_decision": {
+        "defect_score": 0,
+        "critical_defects": [],
+        "high_defects": [],
+        "medium_defects": [],
+        "triggered_checks": []
+      },
+      "reasons": ["Slight tilt within tolerance", "All leads connected properly"]
+    },
+    {
+      "id": "DEV_008",
+      "image_path": "dev_images/DEV_008.png",
+      "label": 1,
+      "label_text": "Abnormal",
+      "confidence": 0.91,
+      "processing_time_ms": 2780,
+      "recheck_performed": true,
+      "recheck_type": "recheck_leads_focus",
+      "yolo_detection": {
+        "holes": {"count": 18, "confidence_avg": 0.91},
+        "leads": {"count": 3, "confidence_avg": 0.85},
+        "body": {"count": 1, "confidence": 0.95}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "none", "rotation": 0, "center_offset": "none", "surface_marks": true},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "bent", "end_position": "in_hole", "contact": true},
+          {"id": "center", "visibility": "clear", "shape": "bent", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "slightly_splayed",
+        "all_leads_reach_holes": true
+      },
+      "stage2_decision": {
+        "defect_score": 4,
+        "critical_defects": [],
+        "high_defects": ["multiple_bent_leads"],
+        "medium_defects": ["surface_contamination"],
+        "triggered_checks": ["recheck_leads_focus"]
+      },
+      "reasons": ["Left and center leads are bent", "Surface contamination marks visible on body"]
+    },
+    {
+      "id": "DEV_009",
+      "image_path": "dev_images/DEV_009.png",
+      "label": 1,
+      "label_text": "Abnormal",
+      "confidence": 0.88,
+      "processing_time_ms": 3320,
+      "recheck_performed": true,
+      "recheck_type": "dual_model_check",
+      "yolo_detection": {
+        "holes": {"count": 16, "confidence_avg": 0.82},
+        "leads": {"count": 3, "confidence_avg": 0.79},
+        "body": {"count": 1, "confidence": 0.91}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "moderate", "rotation": 5, "center_offset": "moderate", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "partial", "shape": "deformed", "end_position": "near_hole", "contact": false},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "asymmetric",
+        "all_leads_reach_holes": false
+      },
+      "stage2_decision": {
+        "defect_score": 5,
+        "critical_defects": [],
+        "high_defects": ["lead_deformation", "body_tilt"],
+        "medium_defects": ["asymmetric_arrangement"],
+        "triggered_checks": ["dual_model_check"]
+      },
+      "reasons": ["Left lead deformed and not reaching hole properly", "Body tilted 5 degrees", "Lead arrangement asymmetric"]
+    },
+    {
+      "id": "DEV_010",
+      "image_path": "dev_images/DEV_010.png",
+      "label": 0,
+      "label_text": "Normal",
+      "confidence": 0.92,
+      "processing_time_ms": 2120,
+      "recheck_performed": false,
+      "yolo_detection": {
+        "holes": {"count": 19, "confidence_avg": 0.94},
+        "leads": {"count": 3, "confidence_avg": 0.96},
+        "body": {"count": 1, "confidence": 0.98}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "none", "rotation": 0, "center_offset": "none", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "parallel",
+        "all_leads_reach_holes": true
+      },
+      "stage2_decision": {
+        "defect_score": 0,
+        "critical_defects": [],
+        "high_defects": [],
+        "medium_defects": [],
+        "triggered_checks": []
+      },
+      "reasons": ["Excellent quality sample", "All parameters within specification"]
+    },
+    {
+      "id": "DEV_011",
+      "image_path": "dev_images/DEV_011.png",
+      "label": 0,
+      "label_text": "Normal",
+      "confidence": 0.89,
+      "processing_time_ms": 2340,
+      "recheck_performed": false,
+      "yolo_detection": {
+        "holes": {"count": 18, "confidence_avg": 0.91},
+        "leads": {"count": 3, "confidence_avg": 0.93},
+        "body": {"count": 1, "confidence": 0.95}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "none", "rotation": 1, "center_offset": "minimal", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "parallel",
+        "all_leads_reach_holes": true
+      },
+      "stage2_decision": {
+        "defect_score": 0,
+        "critical_defects": [],
+        "high_defects": [],
+        "medium_defects": [],
+        "triggered_checks": []
+      },
+      "reasons": ["Normal component placement", "No issues detected"]
+    },
+    {
+      "id": "DEV_012",
+      "image_path": "dev_images/DEV_012.png",
+      "label": 0,
+      "label_text": "Normal",
+      "confidence": 0.91,
+      "processing_time_ms": 2190,
+      "recheck_performed": false,
+      "yolo_detection": {
+        "holes": {"count": 18, "confidence_avg": 0.92},
+        "leads": {"count": 3, "confidence_avg": 0.94},
+        "body": {"count": 1, "confidence": 0.96}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "none", "rotation": 0, "center_offset": "none", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "parallel",
+        "all_leads_reach_holes": true
+      },
+      "stage2_decision": {
+        "defect_score": 0,
+        "critical_defects": [],
+        "high_defects": [],
+        "medium_defects": [],
+        "triggered_checks": []
+      },
+      "reasons": ["Standard quality sample", "All checks passed"]
+    },
+    {
+      "id": "DEV_013",
+      "image_path": "dev_images/DEV_013.png",
+      "label": 0,
+      "label_text": "Normal",
+      "confidence": 0.88,
+      "processing_time_ms": 2270,
+      "recheck_performed": false,
+      "yolo_detection": {
+        "holes": {"count": 17, "confidence_avg": 0.89},
+        "leads": {"count": 3, "confidence_avg": 0.91},
+        "body": {"count": 1, "confidence": 0.94}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "slight", "rotation": 1, "center_offset": "minimal", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "parallel",
+        "all_leads_reach_holes": true
+      },
+      "stage2_decision": {
+        "defect_score": 0,
+        "critical_defects": [],
+        "high_defects": [],
+        "medium_defects": [],
+        "triggered_checks": []
+      },
+      "reasons": ["Minor deviations within spec", "Acceptable quality"]
+    },
+    {
+      "id": "DEV_014",
+      "image_path": "dev_images/DEV_014.png",
+      "label": 1,
+      "label_text": "Abnormal",
+      "confidence": 0.89,
+      "processing_time_ms": 3420,
+      "recheck_performed": true,
+      "recheck_type": "recheck_leads_focus",
+      "yolo_detection": {
+        "holes": {"count": 17, "confidence_avg": 0.88},
+        "leads": {"count": 3, "confidence_avg": 0.82},
+        "body": {"count": 1, "confidence": 0.96}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "slight", "rotation": 2, "center_offset": "minimal", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "bent", "end_position": "near_hole", "contact": false},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "slightly_splayed",
+        "all_leads_reach_holes": false
+      },
+      "stage2_decision": {
+        "defect_score": 4,
+        "critical_defects": [],
+        "high_defects": ["bent_lead"],
+        "medium_defects": [],
+        "triggered_checks": ["recheck_leads_focus"]
+      },
+      "reasons": ["Left lead bent and not reaching hole", "Lead arrangement slightly splayed"]
+    },
+    {
+      "id": "DEV_015",
+      "image_path": "dev_images/DEV_015.png",
+      "label": 0,
+      "label_text": "Normal",
+      "confidence": 0.90,
+      "processing_time_ms": 2150,
+      "recheck_performed": false,
+      "yolo_detection": {
+        "holes": {"count": 18, "confidence_avg": 0.90},
+        "leads": {"count": 3, "confidence_avg": 0.93},
+        "body": {"count": 1, "confidence": 0.95}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "none", "rotation": 0, "center_offset": "none", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "parallel",
+        "all_leads_reach_holes": true
+      },
+      "stage2_decision": {
+        "defect_score": 0,
+        "critical_defects": [],
+        "high_defects": [],
+        "medium_defects": [],
+        "triggered_checks": []
+      },
+      "reasons": ["All components properly positioned", "No defects found"]
+    },
+    {
+      "id": "DEV_016",
+      "image_path": "dev_images/DEV_016.png",
+      "label": 0,
+      "label_text": "Normal",
+      "confidence": 0.86,
+      "processing_time_ms": 2380,
+      "recheck_performed": false,
+      "yolo_detection": {
+        "holes": {"count": 17, "confidence_avg": 0.87},
+        "leads": {"count": 3, "confidence_avg": 0.90},
+        "body": {"count": 1, "confidence": 0.93}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "slight", "rotation": 2, "center_offset": "minimal", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "parallel",
+        "all_leads_reach_holes": true
+      },
+      "stage2_decision": {
+        "defect_score": 0,
+        "critical_defects": [],
+        "high_defects": [],
+        "medium_defects": [],
+        "triggered_checks": []
+      },
+      "reasons": ["Slight rotation within tolerance", "All leads connected"]
+    },
+    {
+      "id": "DEV_017",
+      "image_path": "dev_images/DEV_017.png",
+      "label": 1,
+      "label_text": "Abnormal",
+      "confidence": 0.90,
+      "processing_time_ms": 2580,
+      "recheck_performed": false,
+      "yolo_detection": {
+        "holes": {"count": 18, "confidence_avg": 0.90},
+        "leads": {"count": 3, "confidence_avg": 0.84},
+        "body": {"count": 1, "confidence": 0.93}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "none", "rotation": 0, "center_offset": "none", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "bent", "end_position": "near_hole", "contact": false},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "slightly_splayed",
+        "all_leads_reach_holes": false
+      },
+      "stage2_decision": {
+        "defect_score": 4,
+        "critical_defects": [],
+        "high_defects": ["bent_lead"],
+        "medium_defects": [],
+        "triggered_checks": []
+      },
+      "reasons": ["Left lead is bent and not reaching hole properly", "Lead arrangement slightly splayed"]
+    },
+    {
+      "id": "DEV_018",
+      "image_path": "dev_images/DEV_018.png",
+      "label": 0,
+      "label_text": "Normal",
+      "confidence": 0.94,
+      "processing_time_ms": 2050,
+      "recheck_performed": false,
+      "yolo_detection": {
+        "holes": {"count": 19, "confidence_avg": 0.93},
+        "leads": {"count": 3, "confidence_avg": 0.96},
+        "body": {"count": 1, "confidence": 0.97}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "none", "rotation": 0, "center_offset": "none", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "parallel",
+        "all_leads_reach_holes": true
+      },
+      "stage2_decision": {
+        "defect_score": 0,
+        "critical_defects": [],
+        "high_defects": [],
+        "medium_defects": [],
+        "triggered_checks": []
+      },
+      "reasons": ["Excellent alignment", "All leads properly positioned"]
+    },
+    {
+      "id": "DEV_019",
+      "image_path": "dev_images/DEV_019.png",
+      "label": 0,
+      "label_text": "Normal",
+      "confidence": 0.91,
+      "processing_time_ms": 2200,
+      "recheck_performed": false,
+      "yolo_detection": {
+        "holes": {"count": 18, "confidence_avg": 0.92},
+        "leads": {"count": 3, "confidence_avg": 0.94},
+        "body": {"count": 1, "confidence": 0.96}
+      },
+      "stage1_observation": {
+        "body": {"tilt": "none", "rotation": 0, "center_offset": "minimal", "surface_marks": false},
+        "leads": [
+          {"id": "left", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "center", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true},
+          {"id": "right", "visibility": "clear", "shape": "straight", "end_position": "in_hole", "contact": true}
+        ],
+        "lead_arrangement": "parallel",
+        "all_leads_reach_holes": true
+      },
+      "stage2_decision": {
+        "defect_score": 0,
+        "critical_defects": [],
+        "high_defects": [],
+        "medium_defects": [],
+        "triggered_checks": []
+      },
+      "reasons": ["Normal quality sample", "All checks passed successfully"]
+    }
+  ]
+}
