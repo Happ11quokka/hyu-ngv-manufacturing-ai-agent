@@ -1,16 +1,14 @@
 """
-AI Agent with LangSmith Tracing V6.1
+AI Agent with LangSmith Tracing V8
 Two-Stage Prompt + 가중치 투표 시스템 + 조건부 툴 호출
 
-V6 대비 변경사항 (V6.1):
-1. Suspicious 근거 추가: blob_like, short_like 등 의심스러운 근거 목록 정의
-2. 조건부 툴 호출: confidence가 낮거나, suspicious 근거가 있으면 자동으로 recheck (툴 호출)
-3. 가중치 투표 시스템:
-   - 원본 판정: 1.5배 가중치
-   - Critical 근거 있는 결과: 2.0배 가중치
-   - Suspicious 근거 있는 결과: 1.2배 가중치
-4. 최소 투표 수 요구: 2개 이상의 결과가 있어야 최종 결정 (미달 시 추가 recheck)
-5. should_trigger_recheck() 함수로 명확한 recheck 조건 정의
+V7 대비 변경사항 (V8):
+1. Stage 1 프롬프트에 "구부러진 리드도 정상일 수 있음" 명시
+   - CURVED LEADS CAN BE NORMAL 섹션 추가
+   - "missed_hole" 과잉 판정 방지
+2. Critical 근거(missed_hole 등) 시 전처리 툴 필수 호출
+   - 원본 재검증 + lead tips 전처리 검증 병행
+   - 판정 충돌 없어도 전처리 검증 수행
 """
 
 import os
@@ -82,8 +80,7 @@ CRITICAL_REASONS = [
     "severely_deformed",
 ]
 
-# V6.1: Suspicious 근거 키워드 (확인이 필요한 의심스러운 근거)
-# 이 근거가 있으면 추가 검증(툴 호출)을 수행
+# Suspicious 근거 키워드 (확인이 필요한 의심스러운 근거)
 SUSPICIOUS_REASONS = [
     "blob_like",
     "short_like",
@@ -97,7 +94,7 @@ SUSPICIOUS_REASONS = [
     "irregularity",
 ]
 
-# V6.1: 가중치 설정
+# 가중치 설정
 WEIGHTS = {
     "original": 1.5,           # 원본 판정 가중치
     "critical_reason": 2.0,    # Critical 근거가 있는 결과 가중치
@@ -105,7 +102,7 @@ WEIGHTS = {
     "recheck": 1.0,            # 일반 recheck 결과 가중치
 }
 
-# V6.1: 툴 호출 조건 임계값
+# 툴 호출 조건 임계값
 THRESHOLDS = {
     "confidence_for_recheck": 0.85,      # 이 confidence 이하면 recheck
     "min_votes_for_decision": 2,         # 최소 투표 수 (이하면 추가 recheck)
@@ -132,7 +129,7 @@ FOCUS_SEQUENCE = [
 
 
 # =========================
-# Stage 1: 관찰 전용 프롬프트
+# Stage 1: 관찰 전용 프롬프트 (V8 - 구부러진 리드 정상 케이스 추가)
 # =========================
 STAGE1_SYSTEM = """You are a visual inspection observer for manufacturing images.
 STRICT RULES:
@@ -172,6 +169,44 @@ COMMON DEFECTS TO DETECT:
 - Lead too short to reach the hole
 - Lead crossing over to wrong position
 
+========== V8: CRITICAL - CURVED LEADS CAN BE NORMAL ==========
+DO NOT automatically mark curved/bent leads as "missed_hole"!
+
+IMPORTANT DISTINCTION:
+- NORMAL: Lead bends/curves BUT the TIP (end point) still enters the hole
+- ABNORMAL: Lead bends AND the TIP ends OUTSIDE/BESIDE the hole
+
+Many normal components have slightly curved or bent leads that still connect properly.
+The curve direction (bends_left, bends_right) does NOT determine if it's in the hole!
+
+ONLY CHECK THE TIP LOCATION:
+1. Trace the lead from body DOWN to where the metal ENDS
+2. Is the END POINT overlapping with the dark circular hole?
+   - YES → "in_hole" (even if the lead is curved!)
+   - NO → "missed_hole" (tip is clearly beside/outside the hole)
+
+DO NOT mark "missed_hole" just because a lead is curved!
+
+========== V7: CRITICAL WARNING - COMMON MISTAKES TO AVOID ==========
+1. Do NOT assume leads are in holes just because they point downward!
+2. TRACE each lead tip to its EXACT endpoint - is it truly INSIDE the dark circle?
+3. If a lead PASSES BESIDE a hole but doesn't actually enter it = "missed_hole"
+4. Bent/curved leads often MISS their target holes - check the TIP position carefully!
+5. A lead that bends LEFT or RIGHT may end up NEXT TO the hole, not IN it
+6. Look at WHERE THE METAL ENDS, not where it's pointing toward
+
+========== V8: VERIFICATION STEP FOR EACH LEAD ==========
+Before filling end_position for each lead, perform this check:
+1. Locate the TARGET HOLE (dark circle at bottom)
+2. Locate the LEAD TIP (where the metal actually ends)
+3. Ask: "Is the lead tip OVERLAPPING with the dark hole area?"
+   - YES, tip is inside/overlapping the dark circle → "in_hole"
+   - NO, tip is beside/above/missing the dark circle → "missed_hole"
+   - Cannot determine clearly → "unknown"
+
+REMEMBER: A curved lead with tip IN the hole = "in_hole" (NORMAL)
+Only mark "missed_hole" when the tip is CLEARLY outside the hole boundary!
+
 ========== SURFACE_MARK_UNUSUAL_BLOB (STRICT) ==========
 - "present" ONLY for: foreign objects, solder splatter, physical damage
 - "none" for: normal reflections, standard markings, circular indent on body
@@ -197,6 +232,17 @@ IMPORTANT DEFINITIONS:
 - "connected": Lead tip is INSIDE the hole
 - "floating": Lead tip is NOT inside the hole (missed, bent away, or attached to line instead)
 - "touches_line": Lead is touching or attached to a vertical line/trace (this is a DEFECT)
+
+V8 REMINDER - CURVED LEADS CAN BE NORMAL:
+A lead that bends/curves is NOT automatically "missed_hole"!
+Check ONLY where the lead TIP (end point) is located:
+- Tip inside the dark hole → "in_hole" (even if curved)
+- Tip outside/beside the hole → "missed_hole"
+
+For each lead, ask yourself: "Where does this lead's TIP actually end?"
+- If the tip is INSIDE the dark hole → end_position = "in_hole"
+- If the tip is BESIDE, ABOVE, or MISSING the hole → end_position = "missed_hole"
+- If you cannot clearly see → end_position = "unknown"
 
 Return JSON that matches this exact schema and allowed values:
 
@@ -392,26 +438,144 @@ Stage 1 JSON:
 # =========================
 
 @traceable(name="LLM API Call")
-def _post_chat(messages, timeout=90):
-    """LLM API 호출 - LangSmith에서 추적됨"""
+def _post_chat(messages, timeout=90, max_retries=2):
+    """LLM API 호출 - LangSmith에서 추적됨
+
+    Args:
+        messages: 대화 메시지 리스트
+        timeout: 요청 타임아웃 (초)
+        max_retries: 최대 재시도 횟수
+
+    Returns:
+        LLM 응답 텍스트
+
+    Raises:
+        RuntimeError: API 호출 실패 시
+    """
     payload = {"model": MODEL, "messages": messages,
                "stream": False, "temperature": TEMPERATURE}
-    r = requests.post(BRIDGE_URL, headers=HEADERS,
-                      json=payload, timeout=timeout)
-    if r.status_code != 200:
-        raise RuntimeError(f"status={r.status_code}, body={r.text[:300]}")
-    return r.json()["choices"][0]["message"]["content"].strip()
+
+    last_error = None
+
+    for attempt in range(max_retries):
+        try:
+            r = requests.post(BRIDGE_URL, headers=HEADERS,
+                              json=payload, timeout=timeout)
+
+            if r.status_code != 200:
+                raise RuntimeError(f"status={r.status_code}, body={r.text[:300]}")
+
+            # 응답 JSON 파싱
+            try:
+                response_json = r.json()
+            except json.JSONDecodeError as e:
+                raise RuntimeError(f"Failed to parse API response as JSON: {e}, response: {r.text[:300]}")
+
+            # 응답 구조 검증
+            if "choices" not in response_json:
+                raise RuntimeError(f"API response missing 'choices': {r.text[:300]}")
+
+            if not response_json["choices"]:
+                raise RuntimeError(f"API response 'choices' is empty: {r.text[:300]}")
+
+            if "message" not in response_json["choices"][0]:
+                raise RuntimeError(f"API response missing 'message': {r.text[:300]}")
+
+            if "content" not in response_json["choices"][0]["message"]:
+                raise RuntimeError(f"API response missing 'content': {r.text[:300]}")
+
+            content = response_json["choices"][0]["message"]["content"]
+
+            if content is None:
+                raise RuntimeError(f"API response content is None")
+
+            return content.strip()
+
+        except requests.exceptions.Timeout:
+            last_error = f"Request timeout after {timeout}s"
+        except requests.exceptions.RequestException as e:
+            last_error = f"Request failed: {e}"
+        except RuntimeError as e:
+            last_error = str(e)
+            # API 응답 오류는 재시도 안함
+            raise
+
+        if attempt < max_retries - 1:
+            time.sleep(1.0 * (attempt + 1))
+
+    raise RuntimeError(f"API call failed after {max_retries} attempts: {last_error}")
 
 
 def _safe_json_extract(s: str) -> dict:
-    """JSON 파싱 (LLM 출력에서 JSON 추출)"""
+    """JSON 파싱 (LLM 출력에서 JSON 추출)
+
+    Args:
+        s: LLM 응답 문자열
+
+    Returns:
+        파싱된 JSON 딕셔너리
+
+    Raises:
+        ValueError: JSON 파싱 실패 시
+    """
+    if not s or not isinstance(s, str):
+        raise ValueError(f"Invalid input for JSON parsing: {type(s)}")
+
+    # 1차 시도: 전체 문자열 직접 파싱
     try:
         return json.loads(s)
-    except Exception:
+    except json.JSONDecodeError:
+        pass
+
+    # 2차 시도: 마크다운 코드 블록 제거 후 파싱
+    cleaned = s.strip()
+    if cleaned.startswith("```json"):
+        cleaned = cleaned[7:]
+    elif cleaned.startswith("```"):
+        cleaned = cleaned[3:]
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3]
+    cleaned = cleaned.strip()
+
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+
+    # 3차 시도: 가장 바깥의 중괄호 추출
+    try:
+        # 가장 바깥의 { } 찾기
+        start_idx = s.find("{")
+        if start_idx != -1:
+            # 매칭되는 } 찾기 (중첩 고려)
+            depth = 0
+            end_idx = -1
+            for i, c in enumerate(s[start_idx:], start_idx):
+                if c == "{":
+                    depth += 1
+                elif c == "}":
+                    depth -= 1
+                    if depth == 0:
+                        end_idx = i
+                        break
+
+            if end_idx != -1:
+                json_str = s[start_idx:end_idx + 1]
+                return json.loads(json_str)
+    except json.JSONDecodeError:
+        pass
+
+    # 4차 시도: 정규표현식으로 JSON 블록 추출
+    try:
         m = re.search(r"\{.*\}", s, flags=re.S)
         if m:
             return json.loads(m.group(0))
-    raise ValueError(f"JSON parse failed: {s[:200]}")
+    except json.JSONDecodeError:
+        pass
+
+    # 모든 시도 실패 - 상세 오류 메시지
+    preview = s[:300] if len(s) > 300 else s
+    raise ValueError(f"JSON parse failed. Response preview:\n{preview}")
 
 
 def has_critical_reasons(key_reasons: List[str]) -> bool:
@@ -435,7 +599,7 @@ def count_critical_reasons(key_reasons: List[str]) -> int:
 
 
 def has_suspicious_reasons(key_reasons: List[str]) -> bool:
-    """V6.1: Suspicious 근거가 있는지 확인"""
+    """Suspicious 근거가 있는지 확인"""
     for reason in key_reasons:
         for suspicious in SUSPICIOUS_REASONS:
             if suspicious.lower() in reason.lower():
@@ -444,7 +608,7 @@ def has_suspicious_reasons(key_reasons: List[str]) -> bool:
 
 
 def count_suspicious_reasons(key_reasons: List[str]) -> int:
-    """V6.1: Suspicious 근거 개수 세기"""
+    """Suspicious 근거 개수 세기"""
     count = 0
     for reason in key_reasons:
         for suspicious in SUSPICIOUS_REASONS:
@@ -456,7 +620,7 @@ def count_suspicious_reasons(key_reasons: List[str]) -> int:
 
 def should_trigger_recheck(stage2_result: dict, is_original: bool = False, num_results: int = 1) -> Tuple[bool, str]:
     """
-    V6.1: 추가 recheck가 필요한지 판단
+    추가 recheck가 필요한지 판단
 
     Returns:
         (should_recheck: bool, reason: str)
@@ -488,7 +652,16 @@ def should_trigger_recheck(stage2_result: dict, is_original: bool = False, num_r
 
 @traceable(name="Preprocess Image")
 def preprocess_image_for_focus(img_url: str, focus_action: str, verbose: bool = False) -> str:
-    """Focus 액션에 맞는 전처리 도구를 호출하여 이미지를 전처리"""
+    """Focus 액션에 맞는 전처리 도구를 호출하여 이미지를 전처리
+
+    Args:
+        img_url: 원본 이미지 URL
+        focus_action: 전처리 액션 이름
+        verbose: 상세 출력 여부
+
+    Returns:
+        전처리된 이미지의 data URL 또는 원본 URL (실패 시)
+    """
     if focus_action not in FOCUS_TO_TOOL:
         if verbose:
             print(f"    [전처리] 알 수 없는 focus 액션: {focus_action}, 원본 이미지 사용")
@@ -499,23 +672,55 @@ def preprocess_image_for_focus(img_url: str, focus_action: str, verbose: bool = 
     if verbose:
         print(f"    [전처리] {focus_action} → {tool.name} 호출")
 
-    try:
-        result = tool.invoke({
-            "image_source": img_url,
-            "output_path": None,
-        })
-        if verbose:
-            print(f"    [전처리] 완료 (data URL 길이: {len(result)})")
-        return result
-    except Exception as e:
-        if verbose:
-            print(f"    [전처리] 실패: {e}, 원본 이미지 사용")
-        return img_url
+    # 최대 2회 재시도
+    max_retries = 2
+    last_error = None
+
+    for attempt in range(max_retries):
+        try:
+            result = tool.invoke({
+                "image_source": img_url,
+                "output_path": None,
+            })
+
+            # 결과 유효성 검사
+            if result is None:
+                raise ValueError("Tool returned None")
+
+            if not isinstance(result, str):
+                raise ValueError(f"Tool returned non-string: {type(result)}")
+
+            # data URL 형식 검사
+            if result.startswith("data:image/"):
+                # base64 데이터 최소 크기 검사
+                if len(result) < 100:
+                    raise ValueError(f"Data URL too short: {len(result)} bytes")
+
+                if verbose:
+                    print(f"    [전처리] 완료 (data URL 길이: {len(result)})")
+                return result
+            else:
+                # 파일 경로가 반환된 경우
+                if verbose:
+                    print(f"    [전처리] 완료 (파일 경로: {result})")
+                return result
+
+        except Exception as e:
+            last_error = e
+            if verbose:
+                print(f"    [전처리] 시도 {attempt + 1}/{max_retries} 실패: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(0.3)  # 잠시 대기 후 재시도
+                continue
+
+    if verbose:
+        print(f"    [전처리] 최종 실패: {last_error}, 원본 이미지 사용")
+    return img_url
 
 
-@traceable(name="Stage1 Observe")
+@traceable(name="Stage1 Observe V8")
 def stage1_observe(img_url: str, verbose: bool = False) -> dict:
-    """Stage 1: 이미지 관찰 - 보이는 것만 JSON으로 출력"""
+    """Stage 1: 이미지 관찰 - 보이는 것만 JSON으로 출력 (V8 프롬프트)"""
     content = _post_chat([
         {"role": "system", "content": STAGE1_SYSTEM},
         {"role": "user", "content": [
@@ -557,21 +762,21 @@ def stage2_decide(stage1_json: dict, verbose: bool = False) -> dict:
     return decision
 
 
-@traceable(name="Stage1 Recheck with Preprocessing")
+@traceable(name="Stage1 Recheck with Preprocessing V8")
 def stage1_recheck_with_preprocessing(
     img_url: str,
     focus_action: str,
     verbose: bool = False
 ) -> dict:
-    """Stage 1 재검사: 전처리 도구로 이미지 처리 후 재관찰"""
+    """Stage 1 재검사: 전처리 도구로 이미지 처리 후 재관찰 (V8 프롬프트)"""
     preprocessed_url = preprocess_image_for_focus(
         img_url, focus_action, verbose)
 
     focus_prompts = {
-        "recheck_leads_focus": "Focus specifically on the THREE METAL LEADS. Check their shapes, lengths, alignment to holes, and any overlap or clumping. ",
+        "recheck_leads_focus": "Focus specifically on the THREE METAL LEADS. Check their shapes, lengths, alignment to holes, and any overlap or clumping. VERIFY: Does each lead tip actually END INSIDE its target hole? Remember: curved leads CAN be in_hole if the TIP is inside! ",
         "recheck_body_alignment": "Focus specifically on the BLACK BODY component. Check tilt, rotation, center offset, and any surface damage or marks. ",
-        "patch_recheck_leads": "Focus on the LEAD TIPS and their position relative to the bottom holes. Check if tips are properly aligned. ",
-        "dual_model_check": "Perform a detailed comprehensive check of ALL components: body position, all three leads, and their alignment to the holes. ",
+        "patch_recheck_leads": "Focus on the LEAD TIPS and their position relative to the bottom holes. CRITICAL: Check if tips are INSIDE the holes or BESIDE them. A curved lead with tip IN the hole = in_hole (NORMAL)! ",
+        "dual_model_check": "Perform a detailed comprehensive check of ALL components: body position, all three leads, and their alignment to the holes. VERIFY each lead's end_position carefully. Remember curved leads can still be in_hole! ",
     }
 
     extra_focus = focus_prompts.get(focus_action, "")
@@ -592,14 +797,18 @@ def stage1_recheck_with_preprocessing(
     return obs
 
 
-@traceable(name="Stage1 Original Recheck")
+@traceable(name="Stage1 Original Recheck V8")
 def stage1_original_recheck(img_url: str, verbose: bool = False) -> dict:
-    """Stage 1 재검사: 원본 이미지로 다시 관찰 (전처리 없이)"""
+    """Stage 1 재검사: 원본 이미지로 다시 관찰 (전처리 없이, V8 프롬프트)"""
     extra_prompt = """IMPORTANT: This is a verification recheck.
 Please carefully re-examine the image, especially:
 1. Check each lead's END POSITION - does it actually go INTO the hole or miss it?
 2. Look at the BOTTOM of the image where the holes are located.
 3. Trace each lead from the body down to where it ends.
+4. REMEMBER: A bent/curved lead can STILL be "in_hole" if its TIP is inside the hole!
+5. Only mark "missed_hole" if the tip is CLEARLY outside/beside the hole boundary.
+
+DO NOT assume curved = missed_hole! Check the actual TIP location!
 
 """
 
@@ -636,7 +845,7 @@ def vote_decision(
     result_metadata: List[dict] = None
 ) -> Tuple[str, float, List[str], bool]:
     """
-    V6.1 핵심: 가중치 기반 투표
+    가중치 기반 투표
 
     규칙:
     1. 각 결과에 가중치 부여:
@@ -658,14 +867,14 @@ def vote_decision(
     # 메타데이터가 없으면 기본값 생성 (첫 번째만 original)
     if result_metadata is None:
         result_metadata = [{"is_original": (i == 0)}
-                           for i in range(len(results))]
+                          for i in range(len(results))]
 
     abnormal_weight = 0.0
     normal_weight = 0.0
     all_reasons = []
 
     if verbose:
-        print(f"    [V6.1 가중치 투표]")
+        print(f"    [V8 가중치 투표]")
 
     for i, result in enumerate(results):
         label = result.get("label", "normal")
@@ -692,7 +901,7 @@ def vote_decision(
         weight *= confidence
 
         if verbose:
-            origin_str = "원본" if meta.get("is_original") else "recheck"
+            origin_str = "원본" if meta.get("is_original") else f"recheck({meta.get('focus', 'unknown')})"
             crit_str = "[CRIT]" if has_critical_reasons(key_reasons) else ""
             susp_str = "[SUSP]" if has_suspicious_reasons(key_reasons) else ""
             print(
@@ -731,7 +940,7 @@ def vote_decision(
     return final_label, final_confidence, all_reasons, is_tie
 
 
-@traceable(name="Two-Stage Classify Agent V6.1", run_type="chain")
+@traceable(name="Two-Stage Classify Agent V8", run_type="chain")
 def classify_agent(
     img_url: str,
     img_id: str = None,
@@ -739,13 +948,11 @@ def classify_agent(
     verbose: bool = False
 ) -> Tuple[int, bool, str]:
     """
-    Two-Stage Agent V6.1 - 가중치 투표 + 조건부 툴 호출
+    Two-Stage Agent V8 - 구부러진 리드 정상 케이스 + 전처리 툴 필수 호출
 
-    V6 대비 변경사항:
-    1. Suspicious 근거 (blob_like 등)가 있으면 추가 검증 (툴 호출)
-    2. Confidence가 낮으면 추가 검증
-    3. 최소 투표 수 미달 시 추가 검증
-    4. 가중치 기반 투표 시스템
+    V7 대비 변경사항:
+    1. Stage 1 프롬프트에 "구부러진 리드도 정상일 수 있음" 명시
+    2. Critical 근거 시 전처리 툴(patch_recheck_leads) 필수 호출
     """
     recheck_count = 0
     used_focuses = []
@@ -780,7 +987,7 @@ def classify_agent(
                 print(
                     f"    → Suspicious 근거 수: {count_suspicious_reasons(original_reasons)}")
 
-            # ========== V6.1 핵심: 조건부 툴 호출 로직 ==========
+            # ========== 조건부 툴 호출 로직 ==========
             should_recheck, recheck_reason = should_trigger_recheck(
                 stage2_result, is_original=True, num_results=len(all_results)
             )
@@ -789,63 +996,77 @@ def classify_agent(
                 print(
                     f"    → Recheck 필요: {should_recheck} (이유: {recheck_reason})")
 
-            # ========== Case 1: Critical 근거가 있는 abnormal ==========
+            # ========== V8: Critical 근거가 있는 abnormal → 전처리 툴 필수 호출 ==========
             if original_label == "abnormal" and has_critical_reasons(original_reasons):
                 if verbose:
-                    print(f"\n  [V6.1] Critical 근거가 있는 abnormal → 원본 이미지로 재검증")
+                    print(f"\n  [V8] Critical 근거가 있는 abnormal → 원본 + 전처리 이미지 검증")
 
+                # 1. 원본 이미지로 재검증
                 recheck_count += 1
-                stage1_recheck = stage1_original_recheck(
-                    img_url, verbose=verbose)
+                if verbose:
+                    print(f"\n  [Recheck #{recheck_count}] 원본 이미지 재검증")
+
+                stage1_recheck = stage1_original_recheck(img_url, verbose=verbose)
                 stage2_recheck = stage2_decide(stage1_recheck, verbose=verbose)
                 all_results.append(stage2_recheck)
-                result_metadata.append(
-                    {"is_original": False, "focus": "original_recheck"})
+                result_metadata.append({"is_original": False, "focus": "original_recheck"})
 
                 recheck_label = stage2_recheck.get("label", "normal")
                 recheck_confidence = stage2_recheck.get("confidence", 0.5)
                 recheck_reasons = stage2_recheck.get("key_reasons", [])
 
                 if verbose:
-                    print(
-                        f"    → 재검증 판정: {recheck_label}, confidence: {recheck_confidence:.2f}")
+                    print(f"    → 재검증 판정: {recheck_label}, confidence: {recheck_confidence:.2f}")
                     print(f"    → 재검증 근거: {recheck_reasons}")
 
-                # 원본과 재검증 결과가 다르면 추가 recheck
-                if original_label != recheck_label:
+                # 2. V8 핵심: Lead tips 전처리로 필수 검증 (판정 충돌 여부와 관계없이!)
+                recheck_count += 1
+                used_focuses.append("patch_recheck_leads")
+
+                if verbose:
+                    print(f"\n  [V8 필수 Recheck #{recheck_count}] patch_recheck_leads (Lead Tips 포커스)")
+
+                stage1_tips = stage1_recheck_with_preprocessing(
+                    img_url, "patch_recheck_leads", verbose=verbose)
+                stage2_tips = stage2_decide(stage1_tips, verbose=verbose)
+                all_results.append(stage2_tips)
+                result_metadata.append({"is_original": False, "focus": "patch_recheck_leads"})
+
+                tips_label = stage2_tips.get("label", "normal")
+                tips_confidence = stage2_tips.get("confidence", 0.5)
+
+                if verbose:
+                    print(f"    → Lead Tips 판정: {tips_label}, confidence: {tips_confidence:.2f}")
+
+                # 3. 판정 충돌이 있으면 추가 검증
+                labels_so_far = [r.get("label") for r in all_results]
+                if len(set(labels_so_far)) > 1 and recheck_count < MAX_RECHECK_COUNT:
                     if verbose:
-                        print(
-                            f"\n  [V6.1] 판정 충돌! 원본({original_label}) vs 재검증({recheck_label})")
-                        print(f"  [V6.1] 전처리 이미지로 추가 검증 수행")
+                        print(f"\n  [V8] 판정 충돌 감지! 추가 검증 수행")
 
-                    for focus in FOCUS_SEQUENCE[:2]:
-                        if recheck_count >= MAX_RECHECK_COUNT:
-                            break
-
+                    # recheck_leads_focus로 추가 검증
+                    if "recheck_leads_focus" not in used_focuses:
                         recheck_count += 1
-                        used_focuses.append(focus)
+                        used_focuses.append("recheck_leads_focus")
 
                         if verbose:
-                            print(f"\n  [Recheck #{recheck_count}] {focus}")
+                            print(f"\n  [Recheck #{recheck_count}] recheck_leads_focus")
 
-                        stage1_focus = stage1_recheck_with_preprocessing(
-                            img_url, focus, verbose=verbose)
-                        stage2_focus = stage2_decide(
-                            stage1_focus, verbose=verbose)
-                        all_results.append(stage2_focus)
-                        result_metadata.append(
-                            {"is_original": False, "focus": focus})
+                        stage1_leads = stage1_recheck_with_preprocessing(
+                            img_url, "recheck_leads_focus", verbose=verbose)
+                        stage2_leads = stage2_decide(stage1_leads, verbose=verbose)
+                        all_results.append(stage2_leads)
+                        result_metadata.append({"is_original": False, "focus": "recheck_leads_focus"})
 
                         if verbose:
-                            focus_label = stage2_focus.get("label", "normal")
-                            focus_conf = stage2_focus.get("confidence", 0.5)
-                            print(
-                                f"    → {focus} 판정: {focus_label}, confidence: {focus_conf:.2f}")
+                            leads_label = stage2_leads.get("label", "normal")
+                            leads_conf = stage2_leads.get("confidence", 0.5)
+                            print(f"    → Leads Focus 판정: {leads_label}, confidence: {leads_conf:.2f}")
 
-            # ========== Case 2: Suspicious 근거가 있거나 confidence가 낮은 경우 (V6.1 신규) ==========
+            # ========== Case 2: Suspicious 근거가 있거나 confidence가 낮은 경우 ==========
             elif should_recheck:
                 if verbose:
-                    print(f"\n  [V6.1] 조건부 recheck 트리거: {recheck_reason}")
+                    print(f"\n  [V8] 조건부 recheck 트리거: {recheck_reason}")
 
                 # 첫 번째 recheck: 명시된 triggered_checks가 있으면 그것 사용, 없으면 leads_focus
                 first_focus = triggered_checks if triggered_checks != "none" else "recheck_leads_focus"
@@ -860,20 +1081,18 @@ def classify_agent(
                     img_url, first_focus, verbose=verbose)
                 stage2_recheck = stage2_decide(stage1_recheck, verbose=verbose)
                 all_results.append(stage2_recheck)
-                result_metadata.append(
-                    {"is_original": False, "focus": first_focus})
+                result_metadata.append({"is_original": False, "focus": first_focus})
 
                 recheck_label = stage2_recheck.get("label", "normal")
                 recheck_confidence = stage2_recheck.get("confidence", 0.5)
 
                 if verbose:
-                    print(
-                        f"    → Recheck 판정: {recheck_label}, confidence: {recheck_confidence:.2f}")
+                    print(f"    → Recheck 판정: {recheck_label}, confidence: {recheck_confidence:.2f}")
 
                 # 원본과 recheck 결과가 다르면 추가 검증
                 if original_label != recheck_label and recheck_count < MAX_RECHECK_COUNT:
                     if verbose:
-                        print(f"\n  [V6.1] 판정 충돌! 추가 검증 수행")
+                        print(f"\n  [V8] 판정 충돌! 추가 검증 수행")
 
                     # 추가 focus로 한 번 더 검증
                     for focus in FOCUS_SEQUENCE:
@@ -882,29 +1101,23 @@ def classify_agent(
                             used_focuses.append(focus)
 
                             if verbose:
-                                print(
-                                    f"\n  [Recheck #{recheck_count}] {focus}")
+                                print(f"\n  [Recheck #{recheck_count}] {focus}")
 
                             stage1_focus = stage1_recheck_with_preprocessing(
                                 img_url, focus, verbose=verbose)
-                            stage2_focus = stage2_decide(
-                                stage1_focus, verbose=verbose)
+                            stage2_focus = stage2_decide(stage1_focus, verbose=verbose)
                             all_results.append(stage2_focus)
-                            result_metadata.append(
-                                {"is_original": False, "focus": focus})
+                            result_metadata.append({"is_original": False, "focus": focus})
 
                             if verbose:
-                                focus_label = stage2_focus.get(
-                                    "label", "normal")
-                                focus_conf = stage2_focus.get(
-                                    "confidence", 0.5)
-                                print(
-                                    f"    → {focus} 판정: {focus_label}, confidence: {focus_conf:.2f}")
+                                focus_label = stage2_focus.get("label", "normal")
+                                focus_conf = stage2_focus.get("confidence", 0.5)
+                                print(f"    → {focus} 판정: {focus_label}, confidence: {focus_conf:.2f}")
                             break
 
-            # ========== V6.1: 가중치 기반 투표 ==========
+            # ========== 가중치 기반 투표 ==========
             if verbose:
-                print(f"\n  [V6.1 가중치 투표] 총 {len(all_results)}개 결과로 투표...")
+                print(f"\n  [V8 가중치 투표] 총 {len(all_results)}개 결과로 투표...")
 
             final_label, final_confidence, critical_reasons, is_tie = vote_decision(
                 all_results, verbose=verbose, result_metadata=result_metadata
@@ -913,7 +1126,7 @@ def classify_agent(
             # ========== 동점 시 추가 recheck ==========
             while is_tie and recheck_count < MAX_RECHECK_COUNT:
                 if verbose:
-                    print(f"\n  [V6.1 동점] 추가 recheck로 타이브레이크!")
+                    print(f"\n  [V8 동점] 추가 recheck로 타이브레이크!")
 
                 next_focus = None
                 for focus in FOCUS_SEQUENCE:
@@ -930,16 +1143,13 @@ def classify_agent(
                 used_focuses.append(next_focus)
 
                 if verbose:
-                    print(
-                        f"    → 타이브레이크 recheck #{recheck_count}: {next_focus}")
+                    print(f"    → 타이브레이크 recheck #{recheck_count}: {next_focus}")
 
                 stage1_tiebreak = stage1_recheck_with_preprocessing(
                     img_url, next_focus, verbose=verbose)
-                stage2_tiebreak = stage2_decide(
-                    stage1_tiebreak, verbose=verbose)
+                stage2_tiebreak = stage2_decide(stage1_tiebreak, verbose=verbose)
                 all_results.append(stage2_tiebreak)
-                result_metadata.append(
-                    {"is_original": False, "focus": next_focus})
+                result_metadata.append({"is_original": False, "focus": next_focus})
 
                 tiebreak_label = stage2_tiebreak.get("label", "normal")
                 if verbose:
@@ -963,12 +1173,10 @@ def classify_agent(
 
             if verbose:
                 result_text = '불량(1)' if final_label_int == 1 else '정상(0)'
-                print(
-                    f"\n  [최종 결정] {result_text} (confidence: {final_confidence:.2f})")
+                print(f"\n  [최종 결정] {result_text} (confidence: {final_confidence:.2f})")
                 if needs_review:
                     print(f"  [!] {review_message}")
-                print(
-                    f"  [통계] 총 recheck 횟수: {recheck_count}, 사용된 focus: {used_focuses}")
+                print(f"  [통계] 총 recheck 횟수: {recheck_count}, 사용된 focus: {used_focuses}")
                 print(f"  [통계] 투표 결과: {[r.get('label') for r in all_results]}")
 
             return final_label_int, needs_review, review_message
@@ -985,7 +1193,14 @@ def classify_agent(
 
 
 def process_single_image(args: Tuple[int, str, str, int, bool]) -> dict:
-    """단일 이미지 처리 함수 (병렬 처리용)"""
+    """단일 이미지 처리 함수 (병렬 처리용)
+
+    Args:
+        args: (인덱스, 이미지 ID, 이미지 URL, 총 개수, verbose 플래그)
+
+    Returns:
+        결과 딕셔너리
+    """
     idx, _id, img_url, total, verbose = args
 
     result = {
@@ -1007,23 +1222,43 @@ def process_single_image(args: Tuple[int, str, str, int, bool]) -> dict:
         result_text = '불량(1)' if label == 1 else '정상(0)'
         print(f"[{idx+1}/{total}] {_id} -> {result_text}")
 
-    except Exception as e:
-        print(f"[{idx+1}/{total}] {_id} -> 오류: {e}")
+    except ValueError as e:
+        # JSON 파싱 오류 또는 이미지 처리 오류
+        error_msg = str(e)
+        if "JSON parse failed" in error_msg:
+            print(f"[{idx+1}/{total}] {_id} -> JSON 파싱 오류 (재시도 권장)")
+        else:
+            print(f"[{idx+1}/{total}] {_id} -> 값 오류: {error_msg[:100]}")
         result["needs_review"] = True
-        result["review_message"] = f"오류 발생: {str(e)}"
+        result["review_message"] = f"ValueError: {error_msg[:200]}"
+
+    except RuntimeError as e:
+        # API 호출 오류
+        error_msg = str(e)
+        print(f"[{idx+1}/{total}] {_id} -> API 오류: {error_msg[:100]}")
+        result["needs_review"] = True
+        result["review_message"] = f"RuntimeError: {error_msg[:200]}"
+
+    except Exception as e:
+        # 기타 예상치 못한 오류
+        error_msg = str(e)
+        error_type = type(e).__name__
+        print(f"[{idx+1}/{total}] {_id} -> {error_type}: {error_msg[:100]}")
+        result["needs_review"] = True
+        result["review_message"] = f"{error_type}: {error_msg[:200]}"
 
     return result
 
 
-@traceable(name="Main Pipeline V6.1 Parallel", run_type="chain")
+@traceable(name="Main Pipeline V8 Parallel", run_type="chain")
 def main():
-    """메인 파이프라인 V6.1 - 병렬 처리 버전"""
+    """메인 파이프라인 V8 - 병렬 처리 버전"""
     # 병렬 처리 설정
-    MAX_WORKERS = 10  # 동시 처리할 이미지 수 (API 제한에 따라 조절)
+    MAX_WORKERS = 20  # 동시 처리할 이미지 수 (API 제한에 따라 조절)
     VERBOSE = False   # 병렬 처리 시 verbose는 False 권장
 
     print("=" * 60)
-    print("Two-Stage Prompt Agent V6.1 (병렬 처리 버전)")
+    print("Two-Stage Prompt Agent V8 (구부러진 리드 정상 케이스 + 전처리 필수)")
     print("=" * 60)
     print(f"Model: {MODEL}")
     print(f"Max Workers: {MAX_WORKERS}")

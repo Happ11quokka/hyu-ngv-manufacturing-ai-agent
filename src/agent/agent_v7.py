@@ -1,16 +1,12 @@
 """
-AI Agent with LangSmith Tracing V6.1
+AI Agent with LangSmith Tracing V7
 Two-Stage Prompt + 가중치 투표 시스템 + 조건부 툴 호출
 
-V6 대비 변경사항 (V6.1):
-1. Suspicious 근거 추가: blob_like, short_like 등 의심스러운 근거 목록 정의
-2. 조건부 툴 호출: confidence가 낮거나, suspicious 근거가 있으면 자동으로 recheck (툴 호출)
-3. 가중치 투표 시스템:
-   - 원본 판정: 1.5배 가중치
-   - Critical 근거 있는 결과: 2.0배 가중치
-   - Suspicious 근거 있는 결과: 1.2배 가중치
-4. 최소 투표 수 요구: 2개 이상의 결과가 있어야 최종 결정 (미달 시 추가 recheck)
-5. should_trigger_recheck() 함수로 명확한 recheck 조건 정의
+V6.1 대비 변경사항 (V7):
+1. Stage 1 프롬프트에 "의심하라" 지시 추가
+   - COMMON MISTAKES TO AVOID 섹션 추가
+   - VERIFICATION STEP 추가 (각 리드별 검증 단계)
+   - 리드가 구멍 "옆"을 지나가는 경우를 명확히 경고
 """
 
 import os
@@ -82,8 +78,7 @@ CRITICAL_REASONS = [
     "severely_deformed",
 ]
 
-# V6.1: Suspicious 근거 키워드 (확인이 필요한 의심스러운 근거)
-# 이 근거가 있으면 추가 검증(툴 호출)을 수행
+# Suspicious 근거 키워드 (확인이 필요한 의심스러운 근거)
 SUSPICIOUS_REASONS = [
     "blob_like",
     "short_like",
@@ -97,7 +92,7 @@ SUSPICIOUS_REASONS = [
     "irregularity",
 ]
 
-# V6.1: 가중치 설정
+# 가중치 설정
 WEIGHTS = {
     "original": 1.5,           # 원본 판정 가중치
     "critical_reason": 2.0,    # Critical 근거가 있는 결과 가중치
@@ -105,7 +100,7 @@ WEIGHTS = {
     "recheck": 1.0,            # 일반 recheck 결과 가중치
 }
 
-# V6.1: 툴 호출 조건 임계값
+# 툴 호출 조건 임계값
 THRESHOLDS = {
     "confidence_for_recheck": 0.85,      # 이 confidence 이하면 recheck
     "min_votes_for_decision": 2,         # 최소 투표 수 (이하면 추가 recheck)
@@ -132,7 +127,7 @@ FOCUS_SEQUENCE = [
 
 
 # =========================
-# Stage 1: 관찰 전용 프롬프트
+# Stage 1: 관찰 전용 프롬프트 (V7 - 의심하라 지시 추가)
 # =========================
 STAGE1_SYSTEM = """You are a visual inspection observer for manufacturing images.
 STRICT RULES:
@@ -172,6 +167,25 @@ COMMON DEFECTS TO DETECT:
 - Lead too short to reach the hole
 - Lead crossing over to wrong position
 
+========== V7: CRITICAL WARNING - COMMON MISTAKES TO AVOID ==========
+1. Do NOT assume leads are in holes just because they point downward!
+2. TRACE each lead tip to its EXACT endpoint - is it truly INSIDE the dark circle?
+3. If a lead PASSES BESIDE a hole but doesn't actually enter it = "missed_hole"
+4. Bent/curved leads often MISS their target holes - check the TIP position carefully!
+5. A lead that bends LEFT or RIGHT may end up NEXT TO the hole, not IN it
+6. Look at WHERE THE METAL ENDS, not where it's pointing toward
+
+========== V7: MANDATORY VERIFICATION STEP ==========
+Before filling end_position for each lead, perform this check:
+1. Locate the TARGET HOLE (dark circle at bottom)
+2. Locate the LEAD TIP (where the metal actually ends)
+3. Ask: "Is the lead tip OVERLAPPING with the dark hole area?"
+   - YES, tip is inside/overlapping the dark circle → "in_hole"
+   - NO, tip is beside/above/missing the dark circle → "missed_hole"
+   - Cannot determine clearly → "unknown"
+
+DO NOT mark "in_hole" unless you can clearly see the lead tip entering the hole!
+
 ========== SURFACE_MARK_UNUSUAL_BLOB (STRICT) ==========
 - "present" ONLY for: foreign objects, solder splatter, physical damage
 - "none" for: normal reflections, standard markings, circular indent on body
@@ -197,6 +211,14 @@ IMPORTANT DEFINITIONS:
 - "connected": Lead tip is INSIDE the hole
 - "floating": Lead tip is NOT inside the hole (missed, bent away, or attached to line instead)
 - "touches_line": Lead is touching or attached to a vertical line/trace (this is a DEFECT)
+
+V7 REMINDER - CHECK EACH LEAD CAREFULLY:
+For each lead, ask yourself: "Where does this lead's TIP actually end?"
+- If the tip is INSIDE the dark hole → end_position = "in_hole"
+- If the tip is BESIDE, ABOVE, or MISSING the hole → end_position = "missed_hole"
+- If you cannot clearly see → end_position = "unknown"
+
+DO NOT assume "in_hole" just because the lead points toward the hole direction!
 
 Return JSON that matches this exact schema and allowed values:
 
@@ -435,7 +457,7 @@ def count_critical_reasons(key_reasons: List[str]) -> int:
 
 
 def has_suspicious_reasons(key_reasons: List[str]) -> bool:
-    """V6.1: Suspicious 근거가 있는지 확인"""
+    """Suspicious 근거가 있는지 확인"""
     for reason in key_reasons:
         for suspicious in SUSPICIOUS_REASONS:
             if suspicious.lower() in reason.lower():
@@ -444,7 +466,7 @@ def has_suspicious_reasons(key_reasons: List[str]) -> bool:
 
 
 def count_suspicious_reasons(key_reasons: List[str]) -> int:
-    """V6.1: Suspicious 근거 개수 세기"""
+    """Suspicious 근거 개수 세기"""
     count = 0
     for reason in key_reasons:
         for suspicious in SUSPICIOUS_REASONS:
@@ -456,7 +478,7 @@ def count_suspicious_reasons(key_reasons: List[str]) -> int:
 
 def should_trigger_recheck(stage2_result: dict, is_original: bool = False, num_results: int = 1) -> Tuple[bool, str]:
     """
-    V6.1: 추가 recheck가 필요한지 판단
+    추가 recheck가 필요한지 판단
 
     Returns:
         (should_recheck: bool, reason: str)
@@ -513,9 +535,9 @@ def preprocess_image_for_focus(img_url: str, focus_action: str, verbose: bool = 
         return img_url
 
 
-@traceable(name="Stage1 Observe")
+@traceable(name="Stage1 Observe V7")
 def stage1_observe(img_url: str, verbose: bool = False) -> dict:
-    """Stage 1: 이미지 관찰 - 보이는 것만 JSON으로 출력"""
+    """Stage 1: 이미지 관찰 - 보이는 것만 JSON으로 출력 (V7 프롬프트)"""
     content = _post_chat([
         {"role": "system", "content": STAGE1_SYSTEM},
         {"role": "user", "content": [
@@ -557,21 +579,21 @@ def stage2_decide(stage1_json: dict, verbose: bool = False) -> dict:
     return decision
 
 
-@traceable(name="Stage1 Recheck with Preprocessing")
+@traceable(name="Stage1 Recheck with Preprocessing V7")
 def stage1_recheck_with_preprocessing(
     img_url: str,
     focus_action: str,
     verbose: bool = False
 ) -> dict:
-    """Stage 1 재검사: 전처리 도구로 이미지 처리 후 재관찰"""
+    """Stage 1 재검사: 전처리 도구로 이미지 처리 후 재관찰 (V7 프롬프트)"""
     preprocessed_url = preprocess_image_for_focus(
         img_url, focus_action, verbose)
 
     focus_prompts = {
-        "recheck_leads_focus": "Focus specifically on the THREE METAL LEADS. Check their shapes, lengths, alignment to holes, and any overlap or clumping. ",
+        "recheck_leads_focus": "Focus specifically on the THREE METAL LEADS. Check their shapes, lengths, alignment to holes, and any overlap or clumping. VERIFY: Does each lead tip actually END INSIDE its target hole? ",
         "recheck_body_alignment": "Focus specifically on the BLACK BODY component. Check tilt, rotation, center offset, and any surface damage or marks. ",
-        "patch_recheck_leads": "Focus on the LEAD TIPS and their position relative to the bottom holes. Check if tips are properly aligned. ",
-        "dual_model_check": "Perform a detailed comprehensive check of ALL components: body position, all three leads, and their alignment to the holes. ",
+        "patch_recheck_leads": "Focus on the LEAD TIPS and their position relative to the bottom holes. CRITICAL: Check if tips are INSIDE the holes or BESIDE them. ",
+        "dual_model_check": "Perform a detailed comprehensive check of ALL components: body position, all three leads, and their alignment to the holes. VERIFY each lead's end_position carefully. ",
     }
 
     extra_focus = focus_prompts.get(focus_action, "")
@@ -592,14 +614,15 @@ def stage1_recheck_with_preprocessing(
     return obs
 
 
-@traceable(name="Stage1 Original Recheck")
+@traceable(name="Stage1 Original Recheck V7")
 def stage1_original_recheck(img_url: str, verbose: bool = False) -> dict:
-    """Stage 1 재검사: 원본 이미지로 다시 관찰 (전처리 없이)"""
+    """Stage 1 재검사: 원본 이미지로 다시 관찰 (전처리 없이, V7 프롬프트)"""
     extra_prompt = """IMPORTANT: This is a verification recheck.
 Please carefully re-examine the image, especially:
 1. Check each lead's END POSITION - does it actually go INTO the hole or miss it?
 2. Look at the BOTTOM of the image where the holes are located.
 3. Trace each lead from the body down to where it ends.
+4. A bent lead may POINT toward a hole but END beside it - check the TIP!
 
 """
 
@@ -636,7 +659,7 @@ def vote_decision(
     result_metadata: List[dict] = None
 ) -> Tuple[str, float, List[str], bool]:
     """
-    V6.1 핵심: 가중치 기반 투표
+    가중치 기반 투표
 
     규칙:
     1. 각 결과에 가중치 부여:
@@ -658,14 +681,14 @@ def vote_decision(
     # 메타데이터가 없으면 기본값 생성 (첫 번째만 original)
     if result_metadata is None:
         result_metadata = [{"is_original": (i == 0)}
-                           for i in range(len(results))]
+                          for i in range(len(results))]
 
     abnormal_weight = 0.0
     normal_weight = 0.0
     all_reasons = []
 
     if verbose:
-        print(f"    [V6.1 가중치 투표]")
+        print(f"    [V7 가중치 투표]")
 
     for i, result in enumerate(results):
         label = result.get("label", "normal")
@@ -731,7 +754,7 @@ def vote_decision(
     return final_label, final_confidence, all_reasons, is_tie
 
 
-@traceable(name="Two-Stage Classify Agent V6.1", run_type="chain")
+@traceable(name="Two-Stage Classify Agent V7", run_type="chain")
 def classify_agent(
     img_url: str,
     img_id: str = None,
@@ -739,13 +762,12 @@ def classify_agent(
     verbose: bool = False
 ) -> Tuple[int, bool, str]:
     """
-    Two-Stage Agent V6.1 - 가중치 투표 + 조건부 툴 호출
+    Two-Stage Agent V7 - 의심하라 프롬프트 + 가중치 투표 + 조건부 툴 호출
 
-    V6 대비 변경사항:
-    1. Suspicious 근거 (blob_like 등)가 있으면 추가 검증 (툴 호출)
-    2. Confidence가 낮으면 추가 검증
-    3. 최소 투표 수 미달 시 추가 검증
-    4. 가중치 기반 투표 시스템
+    V6.1 대비 변경사항:
+    1. Stage 1 프롬프트에 "의심하라" 지시 추가
+    2. COMMON MISTAKES TO AVOID 섹션
+    3. MANDATORY VERIFICATION STEP 섹션
     """
     recheck_count = 0
     used_focuses = []
@@ -780,7 +802,7 @@ def classify_agent(
                 print(
                     f"    → Suspicious 근거 수: {count_suspicious_reasons(original_reasons)}")
 
-            # ========== V6.1 핵심: 조건부 툴 호출 로직 ==========
+            # ========== 조건부 툴 호출 로직 ==========
             should_recheck, recheck_reason = should_trigger_recheck(
                 stage2_result, is_original=True, num_results=len(all_results)
             )
@@ -792,7 +814,7 @@ def classify_agent(
             # ========== Case 1: Critical 근거가 있는 abnormal ==========
             if original_label == "abnormal" and has_critical_reasons(original_reasons):
                 if verbose:
-                    print(f"\n  [V6.1] Critical 근거가 있는 abnormal → 원본 이미지로 재검증")
+                    print(f"\n  [V7] Critical 근거가 있는 abnormal → 원본 이미지로 재검증")
 
                 recheck_count += 1
                 stage1_recheck = stage1_original_recheck(
@@ -815,8 +837,8 @@ def classify_agent(
                 if original_label != recheck_label:
                     if verbose:
                         print(
-                            f"\n  [V6.1] 판정 충돌! 원본({original_label}) vs 재검증({recheck_label})")
-                        print(f"  [V6.1] 전처리 이미지로 추가 검증 수행")
+                            f"\n  [V7] 판정 충돌! 원본({original_label}) vs 재검증({recheck_label})")
+                        print(f"  [V7] 전처리 이미지로 추가 검증 수행")
 
                     for focus in FOCUS_SEQUENCE[:2]:
                         if recheck_count >= MAX_RECHECK_COUNT:
@@ -842,10 +864,10 @@ def classify_agent(
                             print(
                                 f"    → {focus} 판정: {focus_label}, confidence: {focus_conf:.2f}")
 
-            # ========== Case 2: Suspicious 근거가 있거나 confidence가 낮은 경우 (V6.1 신규) ==========
+            # ========== Case 2: Suspicious 근거가 있거나 confidence가 낮은 경우 ==========
             elif should_recheck:
                 if verbose:
-                    print(f"\n  [V6.1] 조건부 recheck 트리거: {recheck_reason}")
+                    print(f"\n  [V7] 조건부 recheck 트리거: {recheck_reason}")
 
                 # 첫 번째 recheck: 명시된 triggered_checks가 있으면 그것 사용, 없으면 leads_focus
                 first_focus = triggered_checks if triggered_checks != "none" else "recheck_leads_focus"
@@ -873,7 +895,7 @@ def classify_agent(
                 # 원본과 recheck 결과가 다르면 추가 검증
                 if original_label != recheck_label and recheck_count < MAX_RECHECK_COUNT:
                     if verbose:
-                        print(f"\n  [V6.1] 판정 충돌! 추가 검증 수행")
+                        print(f"\n  [V7] 판정 충돌! 추가 검증 수행")
 
                     # 추가 focus로 한 번 더 검증
                     for focus in FOCUS_SEQUENCE:
@@ -902,9 +924,9 @@ def classify_agent(
                                     f"    → {focus} 판정: {focus_label}, confidence: {focus_conf:.2f}")
                             break
 
-            # ========== V6.1: 가중치 기반 투표 ==========
+            # ========== 가중치 기반 투표 ==========
             if verbose:
-                print(f"\n  [V6.1 가중치 투표] 총 {len(all_results)}개 결과로 투표...")
+                print(f"\n  [V7 가중치 투표] 총 {len(all_results)}개 결과로 투표...")
 
             final_label, final_confidence, critical_reasons, is_tie = vote_decision(
                 all_results, verbose=verbose, result_metadata=result_metadata
@@ -913,7 +935,7 @@ def classify_agent(
             # ========== 동점 시 추가 recheck ==========
             while is_tie and recheck_count < MAX_RECHECK_COUNT:
                 if verbose:
-                    print(f"\n  [V6.1 동점] 추가 recheck로 타이브레이크!")
+                    print(f"\n  [V7 동점] 추가 recheck로 타이브레이크!")
 
                 next_focus = None
                 for focus in FOCUS_SEQUENCE:
@@ -1015,15 +1037,15 @@ def process_single_image(args: Tuple[int, str, str, int, bool]) -> dict:
     return result
 
 
-@traceable(name="Main Pipeline V6.1 Parallel", run_type="chain")
+@traceable(name="Main Pipeline V7 Parallel", run_type="chain")
 def main():
-    """메인 파이프라인 V6.1 - 병렬 처리 버전"""
+    """메인 파이프라인 V7 - 병렬 처리 버전"""
     # 병렬 처리 설정
-    MAX_WORKERS = 10  # 동시 처리할 이미지 수 (API 제한에 따라 조절)
+    MAX_WORKERS = 20  # 동시 처리할 이미지 수 (API 제한에 따라 조절)
     VERBOSE = False   # 병렬 처리 시 verbose는 False 권장
 
     print("=" * 60)
-    print("Two-Stage Prompt Agent V6.1 (병렬 처리 버전)")
+    print("Two-Stage Prompt Agent V7 (의심하라 프롬프트)")
     print("=" * 60)
     print(f"Model: {MODEL}")
     print(f"Max Workers: {MAX_WORKERS}")

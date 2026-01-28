@@ -111,15 +111,55 @@ FOCUS_PRESETS = {
 # 유틸리티 함수
 # =========================
 
-def load_image_from_url(url: str) -> np.ndarray:
-    """URL에서 이미지를 로드하여 OpenCV 형식(BGR)으로 반환"""
-    response = requests.get(url, timeout=30)
-    response.raise_for_status()
-    img_array = np.frombuffer(response.content, np.uint8)
-    img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-    if img is None:
-        raise ValueError(f"Failed to decode image from URL: {url}")
-    return img
+def load_image_from_url(url: str, max_retries: int = 3) -> np.ndarray:
+    """URL에서 이미지를 로드하여 OpenCV 형식(BGR)으로 반환
+
+    Args:
+        url: 이미지 URL
+        max_retries: 최대 재시도 횟수
+
+    Returns:
+        OpenCV BGR 형식의 이미지 배열
+
+    Raises:
+        ValueError: 이미지 로드 또는 디코딩 실패 시
+    """
+    last_error = None
+
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+
+            # 응답 내용이 비어있는지 확인
+            if not response.content or len(response.content) < 100:
+                raise ValueError(f"Empty or too small response content (size: {len(response.content)})")
+
+            img_array = np.frombuffer(response.content, np.uint8)
+
+            # 배열 크기 확인
+            if img_array.size < 100:
+                raise ValueError(f"Image array too small (size: {img_array.size})")
+
+            img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+
+            if img is None:
+                raise ValueError(f"cv2.imdecode returned None")
+
+            # 이미지 크기 확인
+            if img.shape[0] < 10 or img.shape[1] < 10:
+                raise ValueError(f"Decoded image too small: {img.shape}")
+
+            return img
+
+        except Exception as e:
+            last_error = e
+            if attempt < max_retries - 1:
+                import time
+                time.sleep(0.5 * (attempt + 1))  # 점진적 대기
+                continue
+
+    raise ValueError(f"Failed to load image from URL after {max_retries} attempts: {url}, last error: {last_error}")
 
 
 def load_image_from_path(path: str) -> np.ndarray:
@@ -148,8 +188,48 @@ def save_image(img: np.ndarray, output_path: str) -> str:
 
 
 def image_to_base64(img: np.ndarray, format: str = "png") -> str:
-    """OpenCV 이미지를 base64 문자열로 변환"""
-    _, buffer = cv2.imencode(f'.{format}', img)
+    """OpenCV 이미지를 base64 문자열로 변환
+
+    Args:
+        img: OpenCV BGR 형식의 이미지 배열
+        format: 출력 이미지 형식 ("png", "jpg", "jpeg")
+
+    Returns:
+        Base64 인코딩된 문자열
+
+    Raises:
+        ValueError: 이미지가 None이거나 인코딩 실패 시
+    """
+    if img is None:
+        raise ValueError("Image is None, cannot encode to base64")
+
+    if img.size == 0:
+        raise ValueError("Image is empty, cannot encode to base64")
+
+    # 이미지 유효성 검사
+    if len(img.shape) < 2:
+        raise ValueError(f"Invalid image shape: {img.shape}")
+
+    # 이미지가 너무 작은 경우 확인
+    if img.shape[0] < 1 or img.shape[1] < 1:
+        raise ValueError(f"Image dimensions too small: {img.shape}")
+
+    # PNG 인코딩 파라미터 설정 (압축률 최적화)
+    encode_params = []
+    if format.lower() == "png":
+        encode_params = [cv2.IMWRITE_PNG_COMPRESSION, 6]  # 압축률 0-9
+    elif format.lower() in ["jpg", "jpeg"]:
+        encode_params = [cv2.IMWRITE_JPEG_QUALITY, 95]  # 품질 0-100
+
+    # imencode는 (success, buffer) 튜플 반환
+    success, buffer = cv2.imencode(f'.{format}', img, encode_params)
+
+    if not success:
+        raise ValueError(f"cv2.imencode failed for format: {format}, image shape: {img.shape}")
+
+    if buffer is None or len(buffer) == 0:
+        raise ValueError(f"cv2.imencode returned empty buffer for format: {format}")
+
     return base64.b64encode(buffer).decode('utf-8')
 
 
@@ -159,12 +239,32 @@ def base64_to_data_url(base64_str: str, format: str = "png") -> str:
 
 
 def get_output(img: np.ndarray, output_path: Optional[str]) -> str:
-    """이미지를 파일로 저장하거나 data URL로 반환"""
+    """이미지를 파일로 저장하거나 data URL로 반환
+
+    Args:
+        img: OpenCV BGR 형식의 이미지 배열
+        output_path: 저장할 파일 경로 (None이면 data URL 반환)
+
+    Returns:
+        파일 경로 또는 data URL
+
+    Raises:
+        ValueError: 이미지가 None이거나 처리 실패 시
+    """
+    if img is None:
+        raise ValueError("Cannot output None image")
+
+    if img.size == 0:
+        raise ValueError("Cannot output empty image")
+
     if output_path:
         return save_image(img, output_path)
     else:
-        base64_str = image_to_base64(img)
-        return base64_to_data_url(base64_str)
+        try:
+            base64_str = image_to_base64(img)
+            return base64_to_data_url(base64_str)
+        except Exception as e:
+            raise ValueError(f"Failed to convert image to data URL: {e}")
 
 
 # =========================
