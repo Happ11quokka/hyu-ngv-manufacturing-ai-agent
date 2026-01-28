@@ -1,0 +1,8 @@
+# YOLO Dataset Configuration
+# For Roboflow Upload
+
+train: /Users/imdonghyeon/Desktop/hyu-hyundai-ngv-ai-agent-hackathon/data/roboflow_upload/images
+val: /Users/imdonghyeon/Desktop/hyu-hyundai-ngv-ai-agent-hackathon/data/roboflow_upload/images
+
+nc: 3
+names: ['hole', 'lead_tip', 'body']

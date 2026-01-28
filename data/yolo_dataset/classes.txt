@@ -1,0 +1,3 @@
+hole
+lead_tip
+body
