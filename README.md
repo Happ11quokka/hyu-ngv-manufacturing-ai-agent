@@ -2,6 +2,9 @@
 
 **Defect Analysis & Inspection System with OpenAI**
 
+<img width="1162" height="206" alt="image" src="https://github.com/user-attachments/assets/3f496fce-08a6-4d5e-b288-abc66d861da6" />
+
+
 반도체 부품 불량 검출을 위한 Two-Stage Prompting 기반 AI Agent
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Hugging%20Face-yellow?style=for-the-badge&logo=huggingface)](https://huggingface.co/spaces/promise42da/dAIso)
