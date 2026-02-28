@@ -4,92 +4,66 @@
 
 <img width="1162" height="206" alt="image" src="https://github.com/user-attachments/assets/3f496fce-08a6-4d5e-b288-abc66d861da6" />
 
-
 반도체 부품 불량 검출을 위한 Two-Stage Prompting 기반 AI Agent
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Hugging%20Face-yellow?style=for-the-badge&logo=huggingface)](https://huggingface.co/spaces/promise42da/dAIso)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+> [!IMPORTANT]
+> **DACON 현대자동차그룹 x AI 해커톤 — 최우수상 수상**
 
----
+[![Award](https://img.shields.io/badge/DACON-최우수상-FFD700?logo=trophy&logoColor=white)](https://dacon.io/)
+[![Live Demo](https://img.shields.io/badge/Demo-Hugging%20Face-FF9D00?logo=huggingface&logoColor=white)](https://huggingface.co/spaces/promise42da/dAIso)
+[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
-## Demo
-
-> **[Live Demo on Hugging Face Spaces](https://huggingface.co/spaces/promise42da/dAIso)**
-
-실시간으로 분석 결과를 확인하고 AI Assistant와 대화할 수 있는 웹 데모입니다.
-
-![Pipeline Architecture](assets/pipeline_architecture.png)
+![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
+![GPT-4o](https://img.shields.io/badge/GPT--4o-412991?logo=openai&logoColor=white)
+![OpenCV](https://img.shields.io/badge/OpenCV-5C3EE8?logo=opencv&logoColor=white)
+![Roboflow](https://img.shields.io/badge/Roboflow-6706CE?logo=roboflow&logoColor=white)
+![Gradio](https://img.shields.io/badge/Gradio-FF7C00?logo=gradio&logoColor=white)
+![LangSmith](https://img.shields.io/badge/LangSmith-1C3C3C?logo=langchain&logoColor=white)
 
 ---
 
 ## 프로젝트 개요
 
-dAIso Agent는 반도체 부품(TO-220 패키지) 이미지를 분석하여 불량 여부를 자동으로 판정하는 AI 에이전트입니다.
+dAIso Agent는 반도체 부품(TO-220 패키지) 이미지를 분석하여 불량 여부를 자동 판정하는 AI 에이전트입니다. YOLO 기반 컴포넌트 탐지와 GPT-4o Two-Stage Prompting을 결합하고, 신뢰도 기반 조건부 Recheck 및 가중치 투표로 최종 판정의 정확도를 높입니다.
 
-### 핵심 기능
+---
 
-- **YOLO 기반 컴포넌트 탐지**: Roboflow를 통한 리드, 홀, 본체 위치 검출
-- **Two-Stage GPT-4o 분석**: 관찰(Stage 1) → 판정(Stage 2) 구조
-- **조건부 재검증**: 신뢰도 기반 자동 Recheck 시스템
-- **가중치 투표**: 다중 결과 기반 최종 판정
+## 담당 역할
+
+**임동현** — AI Pipeline, Demo, Data (2인 팀)
+
+| 영역 | 기여 내용 |
+|------|-----------|
+| AI Pipeline | Two-Stage Prompting 설계, 조건부 Recheck 로직, 가중치 투표 시스템 |
+| Object Detection | Roboflow 데이터셋 구축, YOLO Workflow 설계 |
+| 이미지 전처리 | OpenCV 기반 4종 전처리 도구 개발 |
+| Demo | Gradio 웹 데모 개발 + Hugging Face Spaces 배포 |
+| Data | 자동 라벨링 파이프라인, 라벨 편집기 개발 |
+| Tracing | LangSmith 연동을 통한 프롬프트 추적 및 디버깅 |
+
+---
+
+## Demo
+
+> **[Live Demo on Hugging Face Spaces](https://huggingface.co/spaces/promise42da/dAIso)** — 실시간으로 분석 결과를 확인하고 AI Assistant와 대화할 수 있습니다.
+
+![Pipeline Architecture](assets/pipeline_architecture.png)
 
 ---
 
 ## 시스템 아키텍처
 
-### Pipeline Overview
-
-```
-┌─────────────────────┐
-│   Image Input       │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│  Stage 0: YOLO      │  → 컴포넌트 탐지 (holes, leads, body)
-│  (Roboflow API)     │  → Bounding Box + Confidence
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│  Stage 1: GPT-4o    │  → 이미지 관찰
-│  (Observation)      │  → 구조화된 JSON 출력
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│  Stage 2: GPT-4o    │  → 불량 판정
-│  (Decision)         │  → 라벨 + 신뢰도 + 근거
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│  Conditional        │  → Confidence < 85%?
-│  Recheck            │  → 4가지 전처리 도구 활용
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│  Weighted Voting    │  → 최종 분류
-│  System             │  → Normal(0) / Abnormal(1)
-└─────────────────────┘
-```
-
 ### Two-Stage Prompting
 
 | Stage | 역할 | 입력 | 출력 |
 |-------|------|------|------|
-| **Stage 1** | 이미지 관찰 | 이미지 + YOLO 힌트 | 구조화된 관찰 JSON |
-| **Stage 2** | 불량 판정 | 관찰 JSON | 라벨, 신뢰도, 근거 |
+| **Stage 0** | 컴포넌트 탐지 (YOLO) | 이미지 | Bounding Box + Confidence |
+| **Stage 1** | 이미지 관찰 (GPT-4o) | 이미지 + YOLO 힌트 | 구조화된 관찰 JSON |
+| **Stage 2** | 불량 판정 (GPT-4o) | 관찰 JSON | 라벨, 신뢰도, 근거 |
 
-### 조건부 Recheck 트리거
+### 조건부 Recheck
 
-```
-CONFIDENCE < 0.85
-OR TRIGGERED_CHECKS != "NONE"
-OR HAS_SUSPICIOUS_REASONS()
-OR NUM_RESULTS < 2
-```
+신뢰도가 85% 미만이거나, 의심 근거가 존재하거나, 결과 수가 부족한 경우 4가지 전처리 도구를 활용하여 자동으로 재검증을 수행합니다.
 
 ### 가중치 투표 시스템
 
@@ -117,28 +91,6 @@ OR NUM_RESULTS < 2
 
 ---
 
-## 결함 분류 체계
-
-### Critical Reasons (확실한 불량)
-
-- `bent_lead`, `missing_lead`, `broken`, `short_circuit`, `lifted_lead`
-
-### Suspicious Reasons (추가 검증 필요)
-
-- `blob_like`, `short_like`, `asymmetric`, `overlap`, `surface_mark`
-
-### Defect Scoring
-
-| Category | Defects | Score |
-|----------|---------|-------|
-| **Critical** | missed_hole, floating_lead, crossed/tangled | Auto-fail |
-| **High** | severe_tilt, blob_shape, deformation | +3~4 |
-| **Medium** | asymmetry, minor_tilt | +2 |
-
-**분류 기준**: Score ≥ 3 → Abnormal(1), Score < 3 → Normal(0)
-
----
-
 ## 기술 스택
 
 | 분류 | 기술 |
@@ -155,12 +107,10 @@ OR NUM_RESULTS < 2
 ## 프로젝트 구조
 
 ```
-hyu-hyundai-ngv-ai-agent-hackathon/
+dAIso-Agent/
 ├── src/
 │   ├── agent/
-│   │   ├── agent_v10.py              # 최신 에이전트 (V10)
-│   │   ├── agent_v6.py ~ agent_v9.py # 버전별 에이전트
-│   │   └── agent_with_langsmith_*.py # LangSmith 버전들
+│   │   └── agent_v10.py              # 최종 에이전트
 │   ├── preprocessing/
 │   │   └── image_preprocessing_tools.py
 │   └── labeling/
@@ -171,16 +121,14 @@ hyu-hyundai-ngv-ai-agent-hackathon/
 │   ├── app.py                        # Gradio 앱
 │   ├── requirements.txt
 │   └── data/
-│       ├── dummy_results.json        # 데모 데이터
-│       └── dev_images/               # 샘플 이미지
+│       ├── dummy_results.json
+│       └── dev_images/
 ├── data/
-│   ├── dev.csv                       # 개발 데이터셋
-│   └── dev_images/                   # 개발 이미지
+│   ├── dev.csv
+│   └── dev_images/
 ├── assets/
 │   ├── pipeline_architecture.png
 │   └── preprocessing_tools.png
-├── docs/
-│   └── luxia_api_reference.md
 ├── requirements.txt
 └── README.md
 ```
@@ -189,18 +137,12 @@ hyu-hyundai-ngv-ai-agent-hackathon/
 
 ## 실행 방법
 
-### 1. 환경 설정
-
 ```bash
-# 가상환경 생성 및 활성화
+# 환경 설정
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# 의존성 설치
 pip install -r requirements.txt
 ```
-
-### 2. 환경 변수 설정
 
 `.env` 파일 생성:
 
@@ -211,46 +153,29 @@ LANGCHAIN_API_KEY=your_langsmith_api_key
 LANGCHAIN_PROJECT=semiconductor-defect-detection
 ```
 
-### 3. 에이전트 실행
-
 ```bash
+# 에이전트 실행
 python src/agent/agent_v10.py
-```
 
-### 4. 로컬 데모 실행
-
-```bash
-cd dAIso
-pip install -r requirements.txt
-python app.py
-```
-
----
-
-## 결과
-
-실행 후 `submission.csv`에 결과가 저장됩니다:
-
-```csv
-id,label
-DEV_000,0
-DEV_001,1
-DEV_002,0
-...
+# 로컬 데모 실행
+cd dAIso && pip install -r requirements.txt && python app.py
 ```
 
 ---
 
 ## 팀 정보
 
-| 역할 | 이름 | GitHub |
+| 이름 | 역할 | GitHub |
 |------|------|--------|
-| 팀원 | 임동현 | [@Happ11quokka](https://github.com/Happ11quokka) |
-| 팀원 | 서문경 | [@Munkyeong-Suh](https://github.com/Munkyeong-Suh) |
+| **임동현** | AI Pipeline, Demo, Data | [@Happ11quokka](https://github.com/Happ11quokka) |
+| 서문경 | Data Analysis | [@Munkyeong-Suh](https://github.com/Munkyeong-Suh) |
 
 ---
 
 ## 참고 문헌
+
+<details>
+<summary>논문 목록 (8편)</summary>
 
 ### Chain-of-Thought Prompting (Two-Stage Reasoning)
 
@@ -280,11 +205,7 @@ DEV_002,0
 | [The Dawn of LMMs: Preliminary Explorations with GPT-4V(ision)](https://arxiv.org/abs/2309.17421) | Yang et al. | arXiv 2023 | GPT-4V의 시각적 이해 능력 종합 평가 |
 | [LogicQA: Logical Anomaly Detection with Vision Language Models](https://aclanthology.org/2025.acl-industry.29/) | - | ACL 2025 Industry | VLM을 활용한 논리적 이상 탐지 |
 
----
-
-## 라이선스
-
-MIT License
+</details>
 
 ---
 
@@ -294,3 +215,7 @@ MIT License
 - [LangSmith Documentation](https://docs.smith.langchain.com/)
 - [Luxia Cloud API](https://luxia.cloud/)
 - [Roboflow](https://roboflow.com/)
+
+## 라이선스
+
+MIT License
