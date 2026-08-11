@@ -1,0 +1,264 @@
+[
+  {
+    "id": "DEV_000",
+    "detection_success": true,
+    "n_holes": 19,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [],
+    "elapsed_sec": 3.42,
+    "error": null
+  },
+  {
+    "id": "DEV_001",
+    "detection_success": true,
+    "n_holes": 20,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [
+      "center_lead_missed_hole",
+      "right_lead_missed_hole"
+    ],
+    "elapsed_sec": 2.08,
+    "error": null
+  },
+  {
+    "id": "DEV_002",
+    "detection_success": true,
+    "n_holes": 19,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [
+      "center_lead_missed_hole",
+      "right_lead_missed_hole"
+    ],
+    "elapsed_sec": 1.89,
+    "error": null
+  },
+  {
+    "id": "DEV_003",
+    "detection_success": true,
+    "n_holes": 22,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [
+      "left_lead_missed_hole",
+      "center_lead_missed_hole",
+      "right_lead_missed_hole"
+    ],
+    "elapsed_sec": 2.35,
+    "error": null
+  },
+  {
+    "id": "DEV_004",
+    "detection_success": true,
+    "n_holes": 24,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [
+      "right_lead_missed_hole"
+    ],
+    "elapsed_sec": 1.89,
+    "error": null
+  },
+  {
+    "id": "DEV_005",
+    "detection_success": true,
+    "n_holes": 24,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [
+      "left_lead_missed_hole",
+      "center_lead_missed_hole",
+      "right_lead_missed_hole"
+    ],
+    "elapsed_sec": 2.15,
+    "error": null
+  },
+  {
+    "id": "DEV_006",
+    "detection_success": true,
+    "n_holes": 25,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [
+      "center_lead_missed_hole",
+      "right_lead_missed_hole"
+    ],
+    "elapsed_sec": 2.0,
+    "error": null
+  },
+  {
+    "id": "DEV_007",
+    "detection_success": true,
+    "n_holes": 20,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [
+      "left_lead_missed_hole",
+      "center_lead_missed_hole",
+      "right_lead_missed_hole"
+    ],
+    "elapsed_sec": 1.95,
+    "error": null
+  },
+  {
+    "id": "DEV_008",
+    "detection_success": true,
+    "n_holes": 19,
+    "n_leads": 3,
+    "body_detected": false,
+    "alignment_issues": [
+      "left_lead_missed_hole",
+      "center_lead_missed_hole",
+      "right_lead_missed_hole"
+    ],
+    "elapsed_sec": 2.0,
+    "error": null
+  },
+  {
+    "id": "DEV_009",
+    "detection_success": true,
+    "n_holes": 24,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [
+      "left_lead_missed_hole"
+    ],
+    "elapsed_sec": 2.08,
+    "error": null
+  },
+  {
+    "id": "DEV_010",
+    "detection_success": true,
+    "n_holes": 20,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [
+      "center_lead_missed_hole",
+      "right_lead_missed_hole"
+    ],
+    "elapsed_sec": 4.04,
+    "error": null
+  },
+  {
+    "id": "DEV_011",
+    "detection_success": true,
+    "n_holes": 25,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [
+      "right_lead_missed_hole"
+    ],
+    "elapsed_sec": 2.53,
+    "error": null
+  },
+  {
+    "id": "DEV_012",
+    "detection_success": true,
+    "n_holes": 24,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [
+      "left_lead_missed_hole",
+      "center_lead_missed_hole",
+      "right_lead_missed_hole"
+    ],
+    "elapsed_sec": 1.64,
+    "error": null
+  },
+  {
+    "id": "DEV_013",
+    "detection_success": true,
+    "n_holes": 24,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [
+      "center_lead_missed_hole",
+      "right_lead_missed_hole"
+    ],
+    "elapsed_sec": 1.83,
+    "error": null
+  },
+  {
+    "id": "DEV_014",
+    "detection_success": true,
+    "n_holes": 20,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [
+      "left_lead_missed_hole",
+      "center_lead_missed_hole"
+    ],
+    "elapsed_sec": 1.69,
+    "error": null
+  },
+  {
+    "id": "DEV_015",
+    "detection_success": true,
+    "n_holes": 24,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [
+      "left_lead_missed_hole",
+      "center_lead_missed_hole",
+      "right_lead_missed_hole"
+    ],
+    "elapsed_sec": 3.27,
+    "error": null
+  },
+  {
+    "id": "DEV_016",
+    "detection_success": true,
+    "n_holes": 20,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [
+      "left_lead_missed_hole",
+      "center_lead_missed_hole",
+      "right_lead_missed_hole"
+    ],
+    "elapsed_sec": 1.67,
+    "error": null
+  },
+  {
+    "id": "DEV_017",
+    "detection_success": true,
+    "n_holes": 20,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [
+      "left_lead_missed_hole",
+      "center_lead_missed_hole",
+      "right_lead_missed_hole"
+    ],
+    "elapsed_sec": 4.81,
+    "error": null
+  },
+  {
+    "id": "DEV_018",
+    "detection_success": true,
+    "n_holes": 25,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [
+      "right_lead_missed_hole"
+    ],
+    "elapsed_sec": 2.16,
+    "error": null
+  },
+  {
+    "id": "DEV_019",
+    "detection_success": true,
+    "n_holes": 24,
+    "n_leads": 3,
+    "body_detected": true,
+    "alignment_issues": [
+      "left_lead_missed_hole",
+      "center_lead_missed_hole",
+      "right_lead_missed_hole"
+    ],
+    "elapsed_sec": 1.74,
+    "error": null
+  }
+]
